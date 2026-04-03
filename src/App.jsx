@@ -15,7 +15,6 @@ function App() {
   const [multiplayer, setMultiplayer] = useState(false);
   const [showLobby, setShowLobby] = useState(false);
   const [pendingGame, setPendingGame] = useState(null);
-  const [serverUrl, setServerUrl] = useState('');
 
   const {
     isReady, error,
@@ -136,8 +135,6 @@ function App() {
       {gameState !== 'loading' && showLobby && (
         <Lobby
           mp={mp}
-          serverUrl={serverUrl}
-          setServerUrl={setServerUrl}
           onStart={startMultiplayerGame}
           onBack={backToMenu}
           gameName={pendingGame === 'flappy' ? 'Flappy Bird' : 'Lane Runner'}
@@ -174,18 +171,9 @@ function App() {
   );
 }
 
-function Lobby({ mp, serverUrl, setServerUrl, onStart, onBack, gameName }) {
-  const [autoUrl] = useState(() => {
-    const host = window.location.hostname;
-    return `ws://${host}:3001`;
-  });
+function Lobby({ mp, onStart, onBack, gameName }) {
+  const [joinCode, setJoinCode] = useState('');
 
-  function handleConnect() {
-    const url = serverUrl.trim() || autoUrl;
-    mp.connect(url);
-  }
-
-  // Auto-start when both players are ready
   useEffect(() => {
     if (mp.connected && mp.peerReady) {
       const t = setTimeout(onStart, 500);
@@ -193,41 +181,65 @@ function Lobby({ mp, serverUrl, setServerUrl, onStart, onBack, gameName }) {
     }
   }, [mp.connected, mp.peerReady, onStart]);
 
+  const isIdle = !mp.role;
+
   return (
     <div className="lobby">
       <h2>{gameName} — Multiplayer</h2>
 
-      {!mp.connected ? (
+      {isIdle && (
         <>
           <p className="lobby-info">
-            Run <code>node server.js</code> on the host machine,<br />
-            then both players connect to the same server.
+            No server needed — connects directly peer-to-peer.
           </p>
-          <div className="lobby-input-row">
-            <input
-              type="text"
-              placeholder={autoUrl}
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-            />
-            <button onClick={handleConnect}>Connect</button>
+          <div className="lobby-buttons">
+            <button className="lobby-host-btn" onClick={() => mp.host()}>
+              Create Room
+            </button>
+            <div className="lobby-or">or</div>
+            <div className="lobby-input-row">
+              <input
+                type="text"
+                placeholder="Enter room code"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && joinCode.trim() && mp.join(joinCode.trim())}
+                maxLength={6}
+              />
+              <button onClick={() => joinCode.trim() && mp.join(joinCode.trim())}>Join</button>
+            </div>
           </div>
           {mp.error && <p className="lobby-error">{mp.error}</p>}
         </>
-      ) : (
+      )}
+
+      {mp.role === 'host' && !mp.peerReady && (
         <div className="lobby-status">
-          <div className="lobby-role">You are <strong>{mp.role === 'host' ? 'Player 1 (Host)' : 'Player 2 (Guest)'}</strong></div>
-          <div className="lobby-waiting">
-            {mp.peerReady ? (
-              <span className="lobby-ready">Other player connected! Starting...</span>
-            ) : (
-              <>
-                <div className="spinner" />
-                <span>Waiting for other player...</span>
-              </>
-            )}
+          <div className="lobby-role">You are <strong>Player 1 (Host)</strong></div>
+          <div className="lobby-code">
+            <span>Room code:</span>
+            <span className="code">{mp.roomCode}</span>
           </div>
+          <div className="lobby-waiting">
+            <div className="spinner" />
+            <span>Share the code — waiting for Player 2...</span>
+          </div>
+        </div>
+      )}
+
+      {mp.role === 'guest' && !mp.peerReady && (
+        <div className="lobby-status">
+          <div className="lobby-role">You are <strong>Player 2 (Guest)</strong></div>
+          <div className="lobby-waiting">
+            <div className="spinner" />
+            <span>Connecting...</span>
+          </div>
+        </div>
+      )}
+
+      {mp.peerReady && (
+        <div className="lobby-status">
+          <span className="lobby-ready">Connected! Starting game...</span>
         </div>
       )}
 

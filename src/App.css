@@ -258,11 +258,36 @@ body {
   line-height: 1.6;
 }
 
-.lobby-info code {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
+.lobby-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.lobby-host-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #c084fc;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lobby-host-btn:hover {
+  background: #a855f7;
+}
+
+.lobby-or {
   font-size: 13px;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .lobby-input-row {
@@ -278,7 +303,11 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.05);
   color: white;
-  font-size: 14px;
+  font-size: 16px;
+  font-family: monospace;
+  text-align: center;
+  letter-spacing: 4px;
+  text-transform: uppercase;
   outline: none;
 }
 
@@ -315,6 +344,23 @@ body {
 
 .lobby-role {
   font-size: 18px;
+}
+
+.lobby-code {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.lobby-code .code {
+  font-family: monospace;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: #c084fc;
+  opacity: 1;
 }
 
 .lobby-waiting {
