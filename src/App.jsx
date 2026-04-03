@@ -172,8 +172,14 @@ function App() {
 }
 
 function Lobby({ mp, onStart, onBack, gameName }) {
-  const [joinCode, setJoinCode] = useState('');
+  // Auto-connect on mount
+  useEffect(() => {
+    if (!mp.connected && !mp.role) {
+      mp.connect();
+    }
+  }, [mp]);
 
+  // Auto-start when both players are in
   useEffect(() => {
     if (mp.connected && mp.peerReady) {
       const t = setTimeout(onStart, 500);
@@ -181,58 +187,26 @@ function Lobby({ mp, onStart, onBack, gameName }) {
     }
   }, [mp.connected, mp.peerReady, onStart]);
 
-  const isIdle = !mp.role;
-
   return (
     <div className="lobby">
       <h2>{gameName} — Multiplayer</h2>
 
-      {isIdle && (
-        <>
-          <p className="lobby-info">
-            No server needed — connects directly peer-to-peer.
-          </p>
-          <div className="lobby-buttons">
-            <button className="lobby-host-btn" onClick={() => mp.host()}>
-              Create Room
-            </button>
-            <div className="lobby-or">or</div>
-            <div className="lobby-input-row">
-              <input
-                type="text"
-                placeholder="Enter room code"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && joinCode.trim() && mp.join(joinCode.trim())}
-                maxLength={6}
-              />
-              <button onClick={() => joinCode.trim() && mp.join(joinCode.trim())}>Join</button>
-            </div>
-          </div>
-          {mp.error && <p className="lobby-error">{mp.error}</p>}
-        </>
-      )}
-
-      {mp.role === 'host' && !mp.peerReady && (
+      {!mp.connected && (
         <div className="lobby-status">
-          <div className="lobby-role">You are <strong>Player 1 (Host)</strong></div>
-          <div className="lobby-code">
-            <span>Room code:</span>
-            <span className="code">{mp.roomCode}</span>
-          </div>
-          <div className="lobby-waiting">
-            <div className="spinner" />
-            <span>Share the code — waiting for Player 2...</span>
-          </div>
+          <div className="spinner" />
+          <span>Connecting...</span>
+          {mp.error && <p className="lobby-error">{mp.error}</p>}
         </div>
       )}
 
-      {mp.role === 'guest' && !mp.peerReady && (
+      {mp.connected && !mp.peerReady && (
         <div className="lobby-status">
-          <div className="lobby-role">You are <strong>Player 2 (Guest)</strong></div>
+          <div className="lobby-role">
+            You are <strong>{mp.role === 'host' ? 'Player 1' : 'Player 2'}</strong>
+          </div>
           <div className="lobby-waiting">
             <div className="spinner" />
-            <span>Connecting...</span>
+            <span>Share this URL — waiting for the other player...</span>
           </div>
         </div>
       )}
