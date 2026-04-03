@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Peer from 'peerjs';
 
+const PREFIX = 'blinkbird-';
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -20,29 +22,54 @@ export function useMultiplayer() {
     onMessageRef.current = fn;
   }, []);
 
-  function setupConn(conn) {
+  const markReady = useCallback(() => {
+    setConnected(true);
+    setPeerReady(true);
+  }, []);
+
+  const attachConn = useCallback((conn) => {
     connRef.current = conn;
-    conn.on('open', () => {
-      setConnected(true);
-      setPeerReady(true);
-    });
+
+    // If already open (race), fire immediately
+    if (conn.open) {
+      markReady();
+    }
+
+    conn.on('open', markReady);
+
     conn.on('data', (data) => {
       onMessageRef.current?.(data);
     });
+
     conn.on('close', () => {
       setConnected(false);
       setPeerReady(false);
     });
+
     conn.on('error', (err) => {
       setError(err.message || 'Connection error');
     });
-  }
+
+    // PeerJS can miss its own 'open' event — listen on the raw datachannel
+    const checkDc = setInterval(() => {
+      const dc = conn.dataChannel;
+      if (dc) {
+        clearInterval(checkDc);
+        if (dc.readyState === 'open') {
+          markReady();
+        } else {
+          dc.addEventListener('open', markReady, { once: true });
+        }
+      }
+    }, 50);
+    // Stop checking after 10s if no datachannel ever appears
+    setTimeout(() => clearInterval(checkDc), 10000);
+  }, [markReady]);
 
   const host = useCallback(() => {
     setError(null);
     const code = generateRoomCode();
-    const prefix = 'blinkbird-';
-    const peer = new Peer(prefix + code);
+    const peer = new Peer(PREFIX + code);
     peerRef.current = peer;
 
     peer.on('open', () => {
@@ -51,24 +78,26 @@ export function useMultiplayer() {
     });
 
     peer.on('connection', (conn) => {
-      setupConn(conn);
+      attachConn(conn);
     });
 
     peer.on('error', (err) => {
       setError(err.message || 'Peer error');
     });
-  }, []);
+  }, [attachConn]);
 
   const join = useCallback((code) => {
     setError(null);
-    const prefix = 'blinkbird-';
     const peer = new Peer();
     peerRef.current = peer;
 
     peer.on('open', () => {
       setRole('guest');
-      const conn = peer.connect(prefix + code.toUpperCase(), { reliable: true });
-      setupConn(conn);
+      const conn = peer.connect(PREFIX + code.toUpperCase(), {
+        reliable: true,
+        serialization: 'json',
+      });
+      attachConn(conn);
     });
 
     peer.on('error', (err) => {
@@ -78,7 +107,7 @@ export function useMultiplayer() {
         setError(err.message || 'Peer error');
       }
     });
-  }, []);
+  }, [attachConn]);
 
   const disconnect = useCallback(() => {
     connRef.current?.close();
