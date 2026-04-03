@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
-// MediaPipe face mesh landmark indices for eyes
 const LEFT_EYE_V1 = [159, 145];
 const LEFT_EYE_V2 = [160, 144];
 const LEFT_EYE_V3 = [158, 153];
@@ -11,6 +10,8 @@ const RIGHT_EYE_V1 = [386, 374];
 const RIGHT_EYE_V2 = [387, 373];
 const RIGHT_EYE_V3 = [385, 380];
 const RIGHT_EYE_H = [362, 263];
+
+const NOSE_TIP = 1;
 
 function dist(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -27,27 +28,98 @@ function eyeAspectRatio(landmarks, v1, v2, v3, h) {
 const EAR_THRESHOLD = 0.24;
 const JAW_THRESHOLD = 0.6;
 const COOLDOWN_MS = 250;
+const HEAD_SWIPE_THRESHOLD = 0.035;
+const HEAD_SWIPE_COOLDOWN = 400;
 
-export function useBlinkDetection(videoRef, mode = 'blink') {
+function createPlayerState() {
+  return {
+    earSmooth: 0.35,
+    tongueSmooth: 0,
+    wasTriggered: false,
+    cooldown: false,
+    headXSmooth: 0.5,
+    headXBaseline: null,
+    headBaselineFrames: 0,
+    headSwipeCooldown: false,
+  };
+}
+
+function processPlayer(ps, lm, blendshapes, mode, onTrigger, onHeadSwipe) {
+  // Blink / tongue
+  let triggered = false;
+
+  if (mode === 'blink') {
+    const leftEAR = eyeAspectRatio(lm, LEFT_EYE_V1, LEFT_EYE_V2, LEFT_EYE_V3, LEFT_EYE_H);
+    const rightEAR = eyeAspectRatio(lm, RIGHT_EYE_V1, RIGHT_EYE_V2, RIGHT_EYE_V3, RIGHT_EYE_H);
+    const avgEAR = (leftEAR + rightEAR) / 2;
+    ps.earSmooth = ps.earSmooth * 0.4 + avgEAR * 0.6;
+    triggered = ps.earSmooth < EAR_THRESHOLD;
+  } else if (mode === 'tongue') {
+    if (blendshapes) {
+      const jawOpen = blendshapes.find(b => b.categoryName === 'jawOpen');
+      const score = jawOpen?.score ?? 0;
+      ps.tongueSmooth = ps.tongueSmooth * 0.3 + score * 0.7;
+      triggered = ps.tongueSmooth > JAW_THRESHOLD;
+    }
+  }
+
+  if (triggered && !ps.wasTriggered && !ps.cooldown) {
+    onTrigger?.();
+    ps.cooldown = true;
+    setTimeout(() => { ps.cooldown = false; }, COOLDOWN_MS);
+  }
+  ps.wasTriggered = triggered;
+
+  // Head X tracking
+  const noseX = lm[NOSE_TIP].x;
+  ps.headXSmooth = ps.headXSmooth * 0.5 + noseX * 0.5;
+
+  if (ps.headBaselineFrames < 30) {
+    ps.headBaselineFrames++;
+    ps.headXBaseline = ps.headXSmooth;
+  } else if (ps.headXBaseline !== null) {
+    ps.headXBaseline = ps.headXBaseline * 0.995 + ps.headXSmooth * 0.005;
+    const delta = ps.headXSmooth - ps.headXBaseline;
+
+    if (Math.abs(delta) > HEAD_SWIPE_THRESHOLD && !ps.headSwipeCooldown) {
+      const direction = delta > 0 ? 'left' : 'right';
+      onHeadSwipe?.(direction);
+      ps.headSwipeCooldown = true;
+      ps.headXBaseline = ps.headXSmooth;
+      setTimeout(() => { ps.headSwipeCooldown = false; }, HEAD_SWIPE_COOLDOWN);
+    }
+  }
+
+  return triggered;
+}
+
+export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
-  const [isTriggered, setIsTriggered] = useState(false);
+  const [p1Triggered, setP1Triggered] = useState(false);
+  const [p2Triggered, setP2Triggered] = useState(false);
+  const [faceCount, setFaceCount] = useState(0);
 
   const landmarkerRef = useRef(null);
-  const wasTriggeredRef = useRef(false);
-  const cooldownRef = useRef(false);
   const rafRef = useRef(null);
-  const onTriggerRef = useRef(null);
-  const earSmoothRef = useRef(0.35);
-  const tongueSmoothRef = useRef(0);
-  const debugRef = useRef(null);
   const modeRef = useRef(mode);
+  const multiplayerRef = useRef(multiplayer);
+
+  const p1State = useRef(createPlayerState());
+  const p2State = useRef(createPlayerState());
+
+  const onP1TriggerRef = useRef(null);
+  const onP2TriggerRef = useRef(null);
+  const onP1HeadSwipeRef = useRef(null);
+  const onP2HeadSwipeRef = useRef(null);
 
   modeRef.current = mode;
+  multiplayerRef.current = multiplayer;
 
-  const setOnBlink = useCallback((fn) => {
-    onTriggerRef.current = fn;
-  }, []);
+  const setOnBlink = useCallback((fn) => { onP1TriggerRef.current = fn; }, []);
+  const setOnP2Blink = useCallback((fn) => { onP2TriggerRef.current = fn; }, []);
+  const setOnHeadSwipe = useCallback((fn) => { onP1HeadSwipeRef.current = fn; }, []);
+  const setOnP2HeadSwipe = useCallback((fn) => { onP2HeadSwipeRef.current = fn; }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +137,7 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
-          numFaces: 1,
+          numFaces: 2,
           outputFacialTransformationMatrixes: false,
           outputFaceBlendshapes: true,
         });
@@ -103,48 +175,42 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
       lastTime = now;
 
       const result = landmarker.detectForVideo(video, now);
+      const faces = result.faceLandmarks || [];
+      setFaceCount(faces.length);
 
-      if (result.faceLandmarks && result.faceLandmarks.length > 0) {
-        let triggered = false;
+      if (faces.length === 0) {
+        rafRef.current = requestAnimationFrame(detect);
+        return;
+      }
 
-        if (modeRef.current === 'blink') {
-          const lm = result.faceLandmarks[0];
-          const leftEAR = eyeAspectRatio(lm, LEFT_EYE_V1, LEFT_EYE_V2, LEFT_EYE_V3, LEFT_EYE_H);
-          const rightEAR = eyeAspectRatio(lm, RIGHT_EYE_V1, RIGHT_EYE_V2, RIGHT_EYE_V3, RIGHT_EYE_H);
-          const avgEAR = (leftEAR + rightEAR) / 2;
-          earSmoothRef.current = earSmoothRef.current * 0.4 + avgEAR * 0.6;
-          triggered = earSmoothRef.current < EAR_THRESHOLD;
-        } else {
-          // Tongue mode — use blendshapes
-          const bs = result.faceBlendshapes;
-          if (bs && bs.length > 0) {
-            const categories = bs[0].categories;
-            const jawOpen = categories.find(b => b.categoryName === 'jawOpen');
-            const score = jawOpen?.score ?? 0;
-            tongueSmoothRef.current = tongueSmoothRef.current * 0.3 + score * 0.7;
-            triggered = tongueSmoothRef.current > JAW_THRESHOLD;
-            debugRef.current = {
-              raw: score,
-              smooth: tongueSmoothRef.current,
-              triggered,
-            };
-          } else {
-            debugRef.current = {
-              raw: 0, smooth: 0, triggered: false,
-              hasBs: false,
-              bsValue: JSON.stringify(bs)?.slice(0, 100),
-            };
-          }
-        }
+      // Sort faces by nose X so left face = P1, right face = P2
+      // Video is mirrored: higher X in video = user's left side
+      const indexed = faces.map((lm, i) => ({ lm, i, noseX: lm[NOSE_TIP].x }));
+      indexed.sort((a, b) => b.noseX - a.noseX); // descending = user's left first
 
-        setIsTriggered(triggered);
+      const mode = modeRef.current;
+      const mp = multiplayerRef.current;
 
-        if (triggered && !wasTriggeredRef.current && !cooldownRef.current) {
-          onTriggerRef.current?.();
-          cooldownRef.current = true;
-          setTimeout(() => { cooldownRef.current = false; }, COOLDOWN_MS);
-        }
-        wasTriggeredRef.current = triggered;
+      // P1 = leftmost face (or only face)
+      const f1 = indexed[0];
+      const bs1 = result.faceBlendshapes?.[f1.i]?.categories;
+      const t1 = processPlayer(
+        p1State.current, f1.lm, bs1, mode,
+        () => onP1TriggerRef.current?.(),
+        (dir) => onP1HeadSwipeRef.current?.(dir)
+      );
+      setP1Triggered(t1);
+
+      // P2 = rightmost face (only in multiplayer with 2+ faces)
+      if (mp && indexed.length >= 2) {
+        const f2 = indexed[1];
+        const bs2 = result.faceBlendshapes?.[f2.i]?.categories;
+        const t2 = processPlayer(
+          p2State.current, f2.lm, bs2, mode,
+          () => onP2TriggerRef.current?.(),
+          (dir) => onP2HeadSwipeRef.current?.(dir)
+        );
+        setP2Triggered(t2);
       }
 
       rafRef.current = requestAnimationFrame(detect);
@@ -156,5 +222,10 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
     };
   }, [isReady, videoRef]);
 
-  return { isReady, error, isTriggered, setOnBlink, debugRef };
+  return {
+    isReady, error, faceCount,
+    p1Triggered, p2Triggered,
+    setOnBlink, setOnP2Blink,
+    setOnHeadSwipe, setOnP2HeadSwipe,
+  };
 }

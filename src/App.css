@@ -89,6 +89,110 @@ body {
   box-shadow: 0 0 8px #4cd964;
 }
 
+/* Menu screen */
+.menu-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-screen h1 {
+  font-size: 52px;
+  font-weight: 700;
+}
+
+.menu-subtitle {
+  font-size: 16px;
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+
+.menu-cards {
+  display: flex;
+  gap: 16px;
+}
+
+.menu-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  width: 180px;
+}
+
+.menu-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.menu-card-emoji {
+  font-size: 40px;
+}
+
+.menu-card-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.menu-card-desc {
+  font-size: 12px;
+  opacity: 0.5;
+  text-align: center;
+}
+
+.menu-card-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-card-mp {
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid rgba(192, 132, 252, 0.3);
+  background: rgba(192, 132, 252, 0.1);
+  color: #c084fc;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.menu-card-mp:hover {
+  background: rgba(192, 132, 252, 0.2);
+  border-color: rgba(192, 132, 252, 0.5);
+}
+
+/* Back button */
+.back-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.back-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+}
+
 .mode-toggle {
   position: absolute;
   top: 12px;
@@ -121,15 +225,135 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.debug-overlay {
+.face-count-badge {
   position: absolute;
-  top: 50px;
+  bottom: 12px;
   left: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #0f0;
-  font-family: monospace;
-  font-size: 11px;
-  padding: 8px;
+  padding: 5px 12px;
   border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Lobby */
+.lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.lobby h2 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.lobby-info {
+  font-size: 14px;
+  opacity: 0.6;
   line-height: 1.6;
+}
+
+.lobby-info code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.lobby-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.lobby-input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.lobby-input-row input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.lobby-input-row button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #c084fc;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lobby-input-row button:hover {
+  background: #a855f7;
+}
+
+.lobby-error {
+  color: #e74c3c;
+  font-size: 14px;
+}
+
+.lobby-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.lobby-role {
+  font-size: 18px;
+}
+
+.lobby-waiting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.lobby-ready {
+  color: #4cd964;
+  font-weight: 600;
+}
+
+.lobby-back {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lobby-back:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+/* MP role badge */
+.mp-role-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(192, 132, 252, 0.3);
+  color: #d8b4fe;
 }
