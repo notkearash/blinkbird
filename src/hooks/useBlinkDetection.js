@@ -25,7 +25,7 @@ function eyeAspectRatio(landmarks, v1, v2, v3, h) {
 }
 
 const EAR_THRESHOLD = 0.24;
-const TONGUE_THRESHOLD = 0.5;
+const JAW_THRESHOLD = 0.6;
 const COOLDOWN_MS = 250;
 
 export function useBlinkDetection(videoRef, mode = 'blink') {
@@ -40,6 +40,7 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
   const onTriggerRef = useRef(null);
   const earSmoothRef = useRef(0.35);
   const tongueSmoothRef = useRef(0);
+  const debugRef = useRef(null);
   const modeRef = useRef(mode);
 
   modeRef.current = mode;
@@ -115,12 +116,24 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
           triggered = earSmoothRef.current < EAR_THRESHOLD;
         } else {
           // Tongue mode — use blendshapes
-          const blendshapes = result.faceBlendshapes?.[0]?.categories;
-          if (blendshapes) {
-            const tongueOut = blendshapes.find(b => b.categoryName === 'tongueOut');
-            const score = tongueOut?.score ?? 0;
+          const bs = result.faceBlendshapes;
+          if (bs && bs.length > 0) {
+            const categories = bs[0].categories;
+            const jawOpen = categories.find(b => b.categoryName === 'jawOpen');
+            const score = jawOpen?.score ?? 0;
             tongueSmoothRef.current = tongueSmoothRef.current * 0.3 + score * 0.7;
-            triggered = tongueSmoothRef.current > TONGUE_THRESHOLD;
+            triggered = tongueSmoothRef.current > JAW_THRESHOLD;
+            debugRef.current = {
+              raw: score,
+              smooth: tongueSmoothRef.current,
+              triggered,
+            };
+          } else {
+            debugRef.current = {
+              raw: 0, smooth: 0, triggered: false,
+              hasBs: false,
+              bsValue: JSON.stringify(bs)?.slice(0, 100),
+            };
           }
         }
 
@@ -143,5 +156,5 @@ export function useBlinkDetection(videoRef, mode = 'blink') {
     };
   }, [isReady, videoRef]);
 
-  return { isReady, error, isTriggered, setOnBlink };
+  return { isReady, error, isTriggered, setOnBlink, debugRef };
 }

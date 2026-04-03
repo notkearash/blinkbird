@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 const W = 400;
 const H = 600;
@@ -12,7 +12,7 @@ const PIPE_INTERVAL = 3500;
 const BIRD_RADIUS = 16;
 const GROUND_H = 40;
 
-function Game({ setOnBlink, isTriggered, gameState, setGameState, videoRef, mode, setMode }) {
+function Game({ setOnBlink, isTriggered, gameState, setGameState, videoRef, mode, setMode, debugRef }) {
   const canvasRef = useRef(null);
   const modeRef = useRef(mode);
   modeRef.current = mode;
@@ -80,6 +80,15 @@ function Game({ setOnBlink, isTriggered, gameState, setGameState, videoRef, mode
     stateRef.current.gameState = gameState;
   }, [gameState]);
 
+  const [debugData, setDebugData] = useState(null);
+  useEffect(() => {
+    if (mode !== 'tongue') return;
+    const id = setInterval(() => {
+      setDebugData(debugRef?.current ? { ...debugRef.current } : null);
+    }, 200);
+    return () => clearInterval(id);
+  }, [mode, debugRef]);
+
   return (
     <div className="game-container">
       <canvas ref={canvasRef} width={W} height={H} />
@@ -97,6 +106,13 @@ function Game({ setOnBlink, isTriggered, gameState, setGameState, videoRef, mode
           Tongue
         </button>
       </div>
+      {mode === 'tongue' && debugData && (
+        <div className="debug-overlay">
+          <div>jaw: {debugData.raw?.toFixed(3)}</div>
+          <div>smooth: {debugData.smooth?.toFixed(3)}</div>
+          <div>triggered: {String(debugData.triggered)}</div>
+        </div>
+      )}
       <PipVideo videoRef={videoRef} isTriggered={isTriggered} />
     </div>
   );

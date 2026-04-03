@@ -10,7 +10,7 @@ function App() {
   const [gameState, setGameState] = useState('loading');
   const [mode, setMode] = useState('blink'); // 'blink' | 'tongue'
 
-  const { isReady, error, isTriggered, setOnBlink } = useBlinkDetection(videoRef, mode);
+  const { isReady, error, isTriggered, setOnBlink, debugRef } = useBlinkDetection(videoRef, mode);
 
   useEffect(() => {
     async function startCamera() {
@@ -72,6 +72,7 @@ function App() {
           videoRef={videoRef}
           mode={mode}
           setMode={setMode}
+          debugRef={debugRef}
         />
       )}
     </div>
