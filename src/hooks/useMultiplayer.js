@@ -17,31 +17,33 @@ export function useMultiplayer() {
   const peerRef = useRef(null);
   const connRef = useRef(null);
   const onMessageRef = useRef(null);
+  const readyFiredRef = useRef(false);
 
   const setOnMessage = useCallback((fn) => {
     onMessageRef.current = fn;
   }, []);
 
   const markReady = useCallback(() => {
+    if (readyFiredRef.current) return;
+    readyFiredRef.current = true;
     setConnected(true);
     setPeerReady(true);
   }, []);
 
   const attachConn = useCallback((conn) => {
     connRef.current = conn;
+    readyFiredRef.current = false;
 
-    // If already open (race), fire immediately
-    if (conn.open) {
-      markReady();
-    }
-
-    conn.on('open', markReady);
+    conn.on('open', () => markReady());
 
     conn.on('data', (data) => {
+      // If we get data, we're definitely connected
+      markReady();
       onMessageRef.current?.(data);
     });
 
     conn.on('close', () => {
+      readyFiredRef.current = false;
       setConnected(false);
       setPeerReady(false);
     });
@@ -49,25 +51,11 @@ export function useMultiplayer() {
     conn.on('error', (err) => {
       setError(err.message || 'Connection error');
     });
-
-    // PeerJS can miss its own 'open' event — listen on the raw datachannel
-    const checkDc = setInterval(() => {
-      const dc = conn.dataChannel;
-      if (dc) {
-        clearInterval(checkDc);
-        if (dc.readyState === 'open') {
-          markReady();
-        } else {
-          dc.addEventListener('open', markReady, { once: true });
-        }
-      }
-    }, 50);
-    // Stop checking after 10s if no datachannel ever appears
-    setTimeout(() => clearInterval(checkDc), 10000);
   }, [markReady]);
 
   const host = useCallback(() => {
     setError(null);
+    readyFiredRef.current = false;
     const code = generateRoomCode();
     const peer = new Peer(PREFIX + code);
     peerRef.current = peer;
@@ -79,6 +67,11 @@ export function useMultiplayer() {
 
     peer.on('connection', (conn) => {
       attachConn(conn);
+      // Host: send a ping once we think we're connected
+      // so guest's on('data') fires and confirms the link
+      conn.on('open', () => {
+        conn.send({ type: 'ping' });
+      });
     });
 
     peer.on('error', (err) => {
@@ -88,6 +81,7 @@ export function useMultiplayer() {
 
   const join = useCallback((code) => {
     setError(null);
+    readyFiredRef.current = false;
     const peer = new Peer();
     peerRef.current = peer;
 
@@ -98,6 +92,10 @@ export function useMultiplayer() {
         serialization: 'json',
       });
       attachConn(conn);
+      // Guest: also send a ping on open so host's on('data') fires
+      conn.on('open', () => {
+        conn.send({ type: 'ping' });
+      });
     });
 
     peer.on('error', (err) => {
@@ -114,6 +112,7 @@ export function useMultiplayer() {
     peerRef.current?.destroy();
     connRef.current = null;
     peerRef.current = null;
+    readyFiredRef.current = false;
     setConnected(false);
     setRole(null);
     setPeerReady(false);
