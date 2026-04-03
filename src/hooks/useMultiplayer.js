@@ -3,8 +3,34 @@ import Peer from 'peerjs';
 
 const PREFIX = 'blinkbird-';
 
+// TURN servers for restrictive networks where direct p2p fails
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+  ],
+};
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function createPeer(id) {
+  return new Peer(id, { config: ICE_CONFIG });
 }
 
 export function useMultiplayer() {
@@ -37,7 +63,6 @@ export function useMultiplayer() {
     conn.on('open', () => markReady());
 
     conn.on('data', (data) => {
-      // If we get data, we're definitely connected
       markReady();
       onMessageRef.current?.(data);
     });
@@ -57,7 +82,7 @@ export function useMultiplayer() {
     setError(null);
     readyFiredRef.current = false;
     const code = generateRoomCode();
-    const peer = new Peer(PREFIX + code);
+    const peer = createPeer(PREFIX + code);
     peerRef.current = peer;
 
     peer.on('open', () => {
@@ -67,8 +92,6 @@ export function useMultiplayer() {
 
     peer.on('connection', (conn) => {
       attachConn(conn);
-      // Host: send a ping once we think we're connected
-      // so guest's on('data') fires and confirms the link
       conn.on('open', () => {
         conn.send({ type: 'ping' });
       });
@@ -82,7 +105,7 @@ export function useMultiplayer() {
   const join = useCallback((code) => {
     setError(null);
     readyFiredRef.current = false;
-    const peer = new Peer();
+    const peer = createPeer(undefined);
     peerRef.current = peer;
 
     peer.on('open', () => {
@@ -92,7 +115,6 @@ export function useMultiplayer() {
         serialization: 'json',
       });
       attachConn(conn);
-      // Guest: also send a ping on open so host's on('data') fires
       conn.on('open', () => {
         conn.send({ type: 'ping' });
       });
