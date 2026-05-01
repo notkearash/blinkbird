@@ -4,6 +4,7 @@ import { useMultiplayer } from './hooks/useMultiplayer';
 import { useAuth } from './hooks/useAuth';
 import Game from './components/Game';
 import Runner from './components/Runner';
+import Landing from './components/Landing';
 import './App.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +91,12 @@ function App() {
 
   const inRoom = Boolean(route.roomId);
   const inLobby = inRoom && !activeGame;
+  const onLanding = !inRoom && !activeGame && gameState !== 'loading';
+
+  useEffect(() => {
+    document.body.classList.toggle('body--landing', onLanding);
+    return () => document.body.classList.remove('body--landing');
+  }, [onLanding]);
 
   function startSolo(game) {
     setMultiplayer(false);
@@ -135,7 +142,7 @@ function App() {
   }, [mp]);
 
   return (
-    <div className="app">
+    <div className={`app${onLanding ? ' app--landing' : ''}`}>
       <video
         ref={videoRef}
         autoPlay
@@ -161,8 +168,8 @@ function App() {
         </div>
       )}
 
-      {gameState !== 'loading' && !inRoom && !activeGame && (
-        <Menu
+      {onLanding && (
+        <Landing
           auth={auth}
           creating={creating}
           createError={createError}
@@ -208,50 +215,6 @@ function App() {
           mp={mp}
         />
       )}
-    </div>
-  );
-}
-
-function Menu({ auth, creating, createError, onSolo, onCreateRoom }) {
-  return (
-    <div className="menu-screen">
-      <h1>BlinkBird</h1>
-      <p className="menu-subtitle">Pick a game</p>
-
-      <AuthBadge auth={auth} />
-
-      <div className="menu-cards">
-        <div className="menu-card-group">
-          <button className="menu-card" onClick={() => onSolo('flappy')}>
-            <span className="menu-card-emoji">🐦</span>
-            <span className="menu-card-title">Flappy Bird</span>
-            <span className="menu-card-desc">Blink to fly</span>
-          </button>
-          <button
-            className="menu-card-mp"
-            disabled={creating || auth.loading}
-            onClick={() => onCreateRoom('flappy')}
-          >
-            {creating ? 'Creating...' : '2P Online — Create room'}
-          </button>
-        </div>
-        <div className="menu-card-group">
-          <button className="menu-card" onClick={() => onSolo('runner')}>
-            <span className="menu-card-emoji">🏃</span>
-            <span className="menu-card-title">Lane Runner</span>
-            <span className="menu-card-desc">Move head to dodge</span>
-          </button>
-          <button
-            className="menu-card-mp"
-            disabled={creating || auth.loading}
-            onClick={() => onCreateRoom('runner')}
-          >
-            {creating ? 'Creating...' : '2P Online — Create room'}
-          </button>
-        </div>
-      </div>
-
-      {createError && <p className="lobby-error">{createError}</p>}
     </div>
   );
 }
