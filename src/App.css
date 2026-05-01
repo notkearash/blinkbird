@@ -11,10 +11,23 @@ body {
   overflow: hidden;
 }
 
+body.body--landing {
+  background: #f4ead5;
+  color: #181410;
+  overflow: auto;
+}
+
 .app {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
+}
+
+.app--landing {
+  display: block;
+  align-items: stretch;
+  justify-content: stretch;
   min-height: 100vh;
 }
 
