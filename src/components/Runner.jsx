@@ -13,8 +13,19 @@ const SPAWN_INTERVAL_MIN = 900;
 const PLAYER_Y_P1 = H - 100;
 const PLAYER_Y_P2 = H - 160;
 
-const P1_COLOR = '#4dc9f6';
-const P2_COLOR = '#c084fc';
+/* ---- riso-zine theme ---- */
+const INK    = '#181410';
+const PAPER  = '#f4ead5';
+const PINK   = '#ff3a86';
+const BLUE   = '#1f3df0';
+const YELLOW = '#ffd83a';
+const ASPHALT = '#1f1a14';
+const DISPLAY_FONT = '"Bricolage Grotesque", system-ui, sans-serif';
+const SERIF_FONT   = '"Newsreader", "Times New Roman", serif';
+const MONO_FONT    = '"JetBrains Mono", ui-monospace, monospace';
+
+const P1_COLOR = PINK;
+const P2_COLOR = BLUE;
 
 function makePlayer(lane) {
   return { lane, x: LANE_X[lane], alive: true, score: 0 };
@@ -229,37 +240,106 @@ function update(s, mp) {
   }
 }
 
+function dotGrid(ctx, x, y, w, h, color, spacing = 5, radius = 1.1) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let py = y + spacing / 2; py < y + h; py += spacing) {
+    for (let px = x + spacing / 2; px < x + w; px += spacing) {
+      ctx.moveTo(px + radius, py);
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+    }
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawCardOverlay(ctx) {
+  ctx.fillStyle = 'rgba(244, 234, 213, 0.86)';
+  ctx.fillRect(0, 0, W, H);
+  const cw = 280, ch = 200, cx = (W - cw) / 2, cy = (H - ch) / 2 - 10;
+  ctx.fillStyle = INK;
+  roundRect(ctx, cx + 6, cy + 6, cw, ch, 14);
+  ctx.fill();
+  ctx.fillStyle = PAPER;
+  roundRect(ctx, cx, cy, cw, ch, 14);
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+}
+
 function draw(ctx, s, mp, role) {
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#1a1a2e');
-  grad.addColorStop(1, '#16213e');
-  ctx.fillStyle = grad;
+  // paper background
+  ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, W, H);
 
+  // halftone shoulder fields
+  dotGrid(ctx, 0, 0, W, H, 'rgba(31, 61, 240, 0.08)', 7, 1.1);
+
+  // road slab
   const roadLeft = W / 2 - 110, roadRight = W / 2 + 110;
-  ctx.fillStyle = '#2a2a4a';
+  ctx.fillStyle = ASPHALT;
   ctx.fillRect(roadLeft, 0, roadRight - roadLeft, H);
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  // ink shoulder rules
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(roadLeft, 0); ctx.lineTo(roadLeft, H);
   ctx.moveTo(roadRight, 0); ctx.lineTo(roadRight, H);
   ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-  ctx.setLineDash([20, 15]);
-  ctx.lineDashOffset = s.animOffset % 35;
+  // pink rumble strips
+  ctx.fillStyle = PINK;
+  for (let i = 0; i < 12; i++) {
+    const markY = ((i * 60 + s.animOffset * 1.2) % (H + 40)) - 20;
+    ctx.fillRect(roadLeft - 5, markY, 8, 24);
+    ctx.fillRect(roadRight - 3, markY, 8, 24);
+  }
+
+  // yellow center dashes
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'square';
+  ctx.setLineDash([22, 18]);
+  ctx.lineDashOffset = -s.animOffset % 40;
   ctx.beginPath();
   ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  for (let i = 0; i < 8; i++) {
-    const markY = ((i * 90 + s.animOffset) % (H + 40)) - 20;
-    ctx.fillRect(roadLeft + 5, markY, 8, 30);
-    ctx.fillRect(roadRight - 13, markY, 8, 30);
+  // ink shadow over center stripe to give it a hand-printed mis-registration vibe
+  ctx.strokeStyle = 'rgba(24, 20, 16, 0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([22, 18]);
+  ctx.lineDashOffset = -s.animOffset % 40 + 1.5;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 2, 0); ctx.lineTo(W / 2 - 2, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // lane separators (faint)
+  ctx.strokeStyle = 'rgba(244, 234, 213, 0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 18; i++) {
+    const markY = ((i * 60 + s.animOffset * 1.2) % (H + 40)) - 20;
+    ctx.beginPath();
+    ctx.moveTo(roadLeft + 8, markY);
+    ctx.lineTo(roadLeft + 24, markY);
+    ctx.moveTo(roadRight - 24, markY);
+    ctx.lineTo(roadRight - 8, markY);
+    ctx.stroke();
   }
 
   for (const ob of s.obstacles) drawObstacle(ctx, LANE_X[ob.lane], ob.y);
@@ -272,78 +352,102 @@ function draw(ctx, s, mp, role) {
     else drawGhostPlayer(ctx, s.p2.x, PLAYER_Y_P2, s.animOffset, P2_COLOR);
   }
 
+  // scores
   if (mp) {
-    ctx.font = 'bold 36px system-ui, sans-serif';
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = 3;
+    ctx.font = `800 38px ${DISPLAY_FONT}`;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 5;
     ctx.textAlign = 'left';
-    ctx.fillStyle = P1_COLOR;
     ctx.strokeText(s.p1.score, 20, 60);
+    ctx.fillStyle = PINK;
     ctx.fillText(s.p1.score, 20, 60);
     ctx.textAlign = 'right';
-    ctx.fillStyle = P2_COLOR;
     ctx.strokeText(s.p2?.score || 0, W - 20, 60);
+    ctx.fillStyle = BLUE;
     ctx.fillText(s.p2?.score || 0, W - 20, 60);
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = 'white';
+
+    ctx.font = `500 11px ${MONO_FONT}`;
+    ctx.fillStyle = PAPER;
+    ctx.globalAlpha = 0.85;
     ctx.textAlign = 'left';
-    ctx.fillText(role === 'host' ? 'YOU' : 'P1', 20, 75);
+    ctx.fillText(role === 'host' ? 'you' : 'p1', 20, 76);
     ctx.textAlign = 'right';
-    ctx.fillText(role === 'guest' ? 'YOU' : 'P2', W - 20, 75);
+    ctx.fillText(role === 'guest' ? 'you' : 'p2', W - 20, 76);
     ctx.globalAlpha = 1;
   } else {
-    ctx.fillStyle = 'white';
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = 3;
-    ctx.font = 'bold 48px system-ui, sans-serif';
+    ctx.font = `800 56px ${DISPLAY_FONT}`;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 6;
     ctx.textAlign = 'center';
-    ctx.strokeText(s.p1.score, W / 2, 65);
-    ctx.fillText(s.p1.score, W / 2, 65);
+    ctx.strokeText(s.p1.score, W / 2, 70);
+    ctx.fillStyle = YELLOW;
+    ctx.fillText(s.p1.score, W / 2, 70);
   }
 
   if (s.gameState === 'waiting') {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 36px system-ui, sans-serif';
+    drawCardOverlay(ctx);
     ctx.textAlign = 'center';
-    ctx.fillText('Lane Runner', W / 2, H / 2 - 50);
-    ctx.font = '18px system-ui, sans-serif';
-    ctx.globalAlpha = 0.8;
-    ctx.fillText(mp ? 'Move your head to dodge!' : 'Move your head left or right!', W / 2, H / 2 - 10);
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.globalAlpha = 0.5;
-    ctx.fillText(mp ? 'Each player on their own device' : '(or press Left / Right)', W / 2, H / 2 + 20);
+    ctx.fillStyle = INK;
+    ctx.font = `800 38px ${DISPLAY_FONT}`;
+    ctx.fillText('lane runner', W / 2, H / 2 - 50);
+
+    ctx.save();
+    ctx.translate(W / 2, H / 2 - 18);
+    ctx.rotate(-0.04);
+    const stampLabel = mp ? 'tilt to dodge' : 'tilt your head';
+    ctx.font = `700 16px ${DISPLAY_FONT}`;
+    const stampW = ctx.measureText(stampLabel).width + 24;
+    roundRect(ctx, -stampW / 2, -16, stampW, 26, 4);
+    ctx.fillStyle = BLUE;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.fillStyle = PAPER;
+    ctx.fillText(stampLabel, 0, 4);
+    ctx.restore();
+
+    ctx.font = `italic 500 14px ${SERIF_FONT}`;
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(mp ? 'each player on their own device' : '(or press ← / →)', W / 2, H / 2 + 22);
     ctx.globalAlpha = 1;
   }
 
   if (s.gameState === 'dead' || s.gameState === 'restart') {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 42px system-ui, sans-serif';
+    drawCardOverlay(ctx);
     ctx.textAlign = 'center';
+
     if (mp) {
       const p1s = s.p1.score, p2s = s.p2?.score || 0;
       const youWon = (role === 'host' && p1s > p2s) || (role === 'guest' && p2s > p1s);
       const youLost = (role === 'host' && p2s > p1s) || (role === 'guest' && p1s > p2s);
-      if (youWon) { ctx.fillStyle = '#4cd964'; ctx.fillText('You Win!', W / 2, H / 2 - 40); }
-      else if (youLost) { ctx.fillStyle = '#e74c3c'; ctx.fillText('You Lose!', W / 2, H / 2 - 40); }
-      else { ctx.fillText('Tie!', W / 2, H / 2 - 40); }
-      ctx.fillStyle = 'white';
-      ctx.font = '20px system-ui, sans-serif';
-      ctx.fillText(`${p1s}  -  ${p2s}`, W / 2, H / 2 + 10);
+      ctx.font = `800 46px ${DISPLAY_FONT}`;
+      if (youWon) { ctx.fillStyle = PINK; ctx.fillText('you win', W / 2, H / 2 - 36); }
+      else if (youLost) { ctx.fillStyle = INK; ctx.fillText('you lose', W / 2, H / 2 - 36); }
+      else { ctx.fillStyle = BLUE; ctx.fillText('a tie', W / 2, H / 2 - 36); }
+      ctx.font = `italic 500 22px ${SERIF_FONT}`;
+      ctx.fillStyle = INK;
+      ctx.fillText(`${p1s}  ·  ${p2s}`, W / 2, H / 2 + 4);
     } else {
-      ctx.fillText('Game Over', W / 2, H / 2 - 40);
-      ctx.font = 'bold 28px system-ui, sans-serif';
-      ctx.fillText(s.p1.score, W / 2, H / 2 + 10);
+      ctx.font = `800 46px ${DISPLAY_FONT}`;
+      ctx.fillStyle = INK;
+      ctx.fillText('crash', W / 2, H / 2 - 36);
+      ctx.font = `800 32px ${DISPLAY_FONT}`;
+      ctx.fillStyle = PINK;
+      ctx.fillText(s.p1.score, W / 2, H / 2 + 6);
     }
-    ctx.fillStyle = 'white';
-    ctx.font = '16px system-ui, sans-serif';
+
+    ctx.font = `500 12px ${MONO_FONT}`;
+    ctx.fillStyle = INK;
     ctx.globalAlpha = 0.6;
-    ctx.fillText(`Best: ${s.highScore}`, W / 2, H / 2 + 40);
-    if (s.gameState === 'restart') ctx.fillText('Move to restart', W / 2, H / 2 + 70);
+    ctx.fillText(`best · ${s.highScore}`, W / 2, H / 2 + 40);
+    if (s.gameState === 'restart') {
+      ctx.font = `italic 500 14px ${SERIF_FONT}`;
+      ctx.fillText('tilt to restart', W / 2, H / 2 + 64);
+    }
     ctx.globalAlpha = 1;
   }
 }
@@ -352,38 +456,122 @@ function drawPlayer(ctx, x, y, animOffset, color) {
   ctx.save();
   ctx.translate(x, y);
   const bob = Math.sin(animOffset * 0.15) * 2;
+
+  // body
   ctx.fillStyle = color;
-  ctx.beginPath(); ctx.ellipse(0, bob, 14, 18, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = color === P1_COLOR ? '#5ee' : '#d8b4fe';
-  ctx.beginPath(); ctx.arc(0, -20 + bob, 10, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1a1a2e';
-  ctx.beginPath(); ctx.arc(-3, -21 + bob, 2, 0, Math.PI * 2); ctx.arc(3, -21 + bob, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, bob, 14, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // halftone shirt
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, bob + 2, 12, 14, 0, 0, Math.PI * 2);
+  ctx.clip();
+  dotGrid(ctx, -14, bob - 14, 28, 32, 'rgba(244,234,213,0.45)', 4, 0.9);
+  ctx.restore();
+
+  // head
+  ctx.fillStyle = PAPER;
+  ctx.beginPath();
+  ctx.arc(0, -20 + bob, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // eyes
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(-3, -21 + bob, 1.8, 0, Math.PI * 2);
+  ctx.arc(3, -21 + bob, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // legs
   const legAngle = Math.sin(animOffset * 0.15) * 0.5;
-  ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(-3, 14 + bob); ctx.lineTo(-3 - Math.sin(legAngle) * 8, 28 + bob);
   ctx.moveTo(3, 14 + bob); ctx.lineTo(3 + Math.sin(legAngle) * 8, 28 + bob);
+  ctx.stroke();
+  // boots in player color
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(-3 - Math.sin(legAngle) * 8 - 2, 28 + bob);
+  ctx.lineTo(-3 - Math.sin(legAngle) * 8 + 2, 28 + bob);
+  ctx.moveTo(3 + Math.sin(legAngle) * 8 - 2, 28 + bob);
+  ctx.lineTo(3 + Math.sin(legAngle) * 8 + 2, 28 + bob);
   ctx.stroke();
   ctx.restore();
 }
 
 function drawGhostPlayer(ctx, x, y, animOffset, color) {
-  ctx.save(); ctx.globalAlpha = 0.25;
+  ctx.save();
+  ctx.globalAlpha = 0.3;
   drawPlayer(ctx, x, y, animOffset, color);
   ctx.restore();
 }
 
 function drawObstacle(ctx, x, y) {
-  ctx.fillStyle = '#e74c3c';
+  // hazard ink stamp with halftone fill + yellow trim
+  ctx.save();
+  ctx.translate(x, y);
+
+  // outer ink shape
+  ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.moveTo(x, y - 22); ctx.lineTo(x + 14, y - 8); ctx.lineTo(x + 22, y - 20);
-  ctx.lineTo(x + 20, y + 5); ctx.lineTo(x + 12, y + 22); ctx.lineTo(x - 5, y + 18);
-  ctx.lineTo(x - 18, y + 22); ctx.lineTo(x - 22, y + 2); ctx.lineTo(x - 20, y - 16);
-  ctx.lineTo(x - 8, y - 6); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ff6b6b';
+  ctx.moveTo(0, -22);
+  ctx.lineTo(14, -8);
+  ctx.lineTo(22, -20);
+  ctx.lineTo(20, 5);
+  ctx.lineTo(12, 22);
+  ctx.lineTo(-5, 18);
+  ctx.lineTo(-18, 22);
+  ctx.lineTo(-22, 2);
+  ctx.lineTo(-20, -16);
+  ctx.lineTo(-8, -6);
+  ctx.closePath();
+  ctx.fill();
+
+  // pink halftone interior
+  ctx.save();
+  ctx.clip();
+  dotGrid(ctx, -24, -24, 48, 48, PINK, 4, 1.4);
+  ctx.restore();
+
+  // yellow danger flash
+  ctx.fillStyle = YELLOW;
   ctx.beginPath();
-  ctx.moveTo(x - 5, y - 15); ctx.lineTo(x + 8, y - 5); ctx.lineTo(x, y + 5);
-  ctx.lineTo(x - 10, y - 3); ctx.closePath(); ctx.fill();
+  ctx.moveTo(-3, -10);
+  ctx.lineTo(6, -2);
+  ctx.lineTo(0, 2);
+  ctx.lineTo(4, 10);
+  ctx.lineTo(-6, 1);
+  ctx.lineTo(-1, -3);
+  ctx.closePath();
+  ctx.fill();
+
+  // outline
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -22);
+  ctx.lineTo(14, -8);
+  ctx.lineTo(22, -20);
+  ctx.lineTo(20, 5);
+  ctx.lineTo(12, 22);
+  ctx.lineTo(-5, 18);
+  ctx.lineTo(-18, 22);
+  ctx.lineTo(-22, 2);
+  ctx.lineTo(-20, -16);
+  ctx.lineTo(-8, -6);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 function PipVideo({ videoRef }) {

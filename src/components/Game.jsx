@@ -12,8 +12,19 @@ const PIPE_INTERVAL = 3500;
 const BIRD_RADIUS = 16;
 const GROUND_H = 40;
 
-const P1_COLORS = { body: '#f5c542', wing: '#e6a817', beak: '#e85d04' };
-const P2_COLORS = { body: '#c084fc', wing: '#9333ea', beak: '#7c3aed' };
+/* ---- riso-zine theme ---- */
+const INK    = '#181410';
+const PAPER  = '#f4ead5';
+const PAPER2 = '#ece1c8';
+const PINK   = '#ff3a86';
+const BLUE   = '#1f3df0';
+const YELLOW = '#ffd83a';
+const DISPLAY_FONT = '"Bricolage Grotesque", system-ui, sans-serif';
+const SERIF_FONT   = '"Newsreader", "Times New Roman", serif';
+const MONO_FONT    = '"JetBrains Mono", ui-monospace, monospace';
+
+const P1_COLORS = { body: PINK,   wing: '#d11a66', beak: YELLOW };
+const P2_COLORS = { body: BLUE,   wing: '#0c2bc0', beak: YELLOW };
 
 function makeBird(x) {
   return { x, y: H / 2, vy: 0, flapFrame: 0, alive: true, score: 0 };
@@ -249,37 +260,54 @@ function update(s, mp) {
   }
 }
 
+/* ---- halftone helpers ---- */
+function dotGrid(ctx, x, y, w, h, color, spacing = 5, radius = 1.1) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let py = y + spacing / 2; py < y + h; py += spacing) {
+    for (let px = x + spacing / 2; px < x + w; px += spacing) {
+      ctx.moveTo(px + radius, py);
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+    }
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
 function draw(ctx, s, mode, mp, role) {
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#4dc9f6');
-  grad.addColorStop(1, '#a8e6cf');
-  ctx.fillStyle = grad;
+  // paper background
+  ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  // drifting halftone "clouds"
   const t = Date.now() / 5000;
-  for (let i = 0; i < 5; i++) {
-    const cx = ((i * 97 + t * 50) % (W + 100)) - 50;
-    const cy = 50 + i * 55;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 38, 16, 0, 0, Math.PI * 2);
-    ctx.ellipse(cx + 22, cy - 4, 28, 13, 0, 0, Math.PI * 2);
-    ctx.ellipse(cx - 18, cy + 2, 22, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
+  for (let i = 0; i < 4; i++) {
+    const cx = ((i * 137 + t * 28) % (W + 160)) - 80;
+    const cy = 60 + i * 70;
+    ctx.save();
+    ctx.translate(cx, cy);
+    dotGrid(ctx, -42, -14, 84, 28, 'rgba(31, 61, 240, 0.22)', 5, 1.4);
+    ctx.restore();
   }
 
+  // pipes
   for (const p of s.pipes) drawPipe(ctx, p);
 
-  ctx.fillStyle = '#4CAF50';
-  ctx.fillRect(0, H - GROUND_H - 4, W, 8);
-  ctx.fillStyle = '#8B6914';
+  // ground: ink slab + yellow stripe + serif "label" texture
+  ctx.fillStyle = INK;
   ctx.fillRect(0, H - GROUND_H, W, GROUND_H);
-  ctx.fillStyle = '#6B4F12';
-  ctx.fillRect(0, H - GROUND_H, W, 3);
-
-  // Highlight "you" bird
-  const myColors = role === 'guest' ? P2_COLORS : P1_COLORS;
-  const otherColors = role === 'guest' ? P1_COLORS : P2_COLORS;
+  ctx.fillStyle = YELLOW;
+  ctx.fillRect(0, H - GROUND_H, W, 4);
+  // newsprint hatching
+  ctx.strokeStyle = 'rgba(244, 234, 213, 0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = -GROUND_H; x < W + GROUND_H; x += 9) {
+    ctx.moveTo(x, H - GROUND_H + 6);
+    ctx.lineTo(x + GROUND_H - 6, H);
+  }
+  ctx.stroke();
 
   if (s.p1.alive) drawBird(ctx, s.p1, P1_COLORS);
   else drawGhost(ctx, s.p1, P1_COLORS);
@@ -289,60 +317,75 @@ function draw(ctx, s, mode, mp, role) {
     else drawGhost(ctx, s.p2, P2_COLORS);
   }
 
-  // Scores
+  // scores
   if (mp) {
-    ctx.font = 'bold 36px system-ui, sans-serif';
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 3;
+    ctx.font = `800 38px ${DISPLAY_FONT}`;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 5;
     ctx.textAlign = 'left';
-    ctx.fillStyle = P1_COLORS.body;
     ctx.strokeText(s.p1.score, 20, 60);
+    ctx.fillStyle = PINK;
     ctx.fillText(s.p1.score, 20, 60);
     ctx.textAlign = 'right';
-    ctx.fillStyle = P2_COLORS.body;
     ctx.strokeText(s.p2?.score || 0, W - 20, 60);
+    ctx.fillStyle = BLUE;
     ctx.fillText(s.p2?.score || 0, W - 20, 60);
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = 'white';
+
+    ctx.font = `500 11px ${MONO_FONT}`;
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.7;
     ctx.textAlign = 'left';
-    ctx.fillText(role === 'host' ? 'YOU' : 'P1', 20, 75);
+    ctx.fillText(role === 'host' ? 'you ↓' : 'p1', 20, 76);
     ctx.textAlign = 'right';
-    ctx.fillText(role === 'guest' ? 'YOU' : 'P2', W - 20, 75);
+    ctx.fillText(role === 'guest' ? 'you ↓' : 'p2', W - 20, 76);
     ctx.globalAlpha = 1;
   } else {
-    ctx.fillStyle = 'white';
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 4;
-    ctx.font = 'bold 48px system-ui, sans-serif';
+    ctx.font = `800 56px ${DISPLAY_FONT}`;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 6;
     ctx.textAlign = 'center';
-    ctx.strokeText(s.p1.score, W / 2, 65);
-    ctx.fillText(s.p1.score, W / 2, 65);
+    ctx.strokeText(s.p1.score, W / 2, 70);
+    ctx.fillStyle = YELLOW;
+    ctx.fillText(s.p1.score, W / 2, 70);
   }
 
-  const actionWord = mode === 'tongue' ? 'Tongue out' : 'Blink';
+  const actionWord = mode === 'tongue' ? 'tongue out' : 'blink';
 
   if (s.gameState === 'waiting') {
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 42px system-ui, sans-serif';
+    drawCardOverlay(ctx);
     ctx.textAlign = 'center';
-    ctx.fillText('BlinkBird', W / 2, H / 2 - 60);
-    ctx.font = '18px system-ui, sans-serif';
-    ctx.globalAlpha = 0.8;
-    ctx.fillText(mp ? `Both ${actionWord.toLowerCase()} to fly!` : `${actionWord} to fly!`, W / 2, H / 2 - 20);
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.globalAlpha = 0.5;
-    ctx.fillText(mp ? 'Each player on their own device' : '(or press Space)', W / 2, H / 2 + 10);
+    ctx.fillStyle = INK;
+    ctx.font = `800 44px ${DISPLAY_FONT}`;
+    ctx.fillText('blinkbird', W / 2, H / 2 - 56);
+    // pink stamp under title
+    ctx.save();
+    ctx.translate(W / 2, H / 2 - 22);
+    ctx.rotate(-0.04);
+    ctx.fillStyle = PINK;
+    const stampLabel = mp ? `both ${actionWord} to fly` : `${actionWord} to fly`;
+    ctx.font = `700 16px ${DISPLAY_FONT}`;
+    const stampW = ctx.measureText(stampLabel).width + 24;
+    roundRect(ctx, -stampW / 2, -16, stampW, 26, 4);
+    ctx.fillStyle = PINK;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    ctx.fillStyle = PAPER;
+    ctx.fillText(stampLabel, 0, 4);
+    ctx.restore();
+
+    ctx.font = `italic 500 14px ${SERIF_FONT}`;
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(mp ? 'each player on their own device' : '(or press space)', W / 2, H / 2 + 18);
     ctx.globalAlpha = 1;
   }
 
   if (s.gameState === 'dead' || s.gameState === 'restart') {
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 42px system-ui, sans-serif';
+    drawCardOverlay(ctx);
     ctx.textAlign = 'center';
 
     if (mp) {
@@ -350,83 +393,161 @@ function draw(ctx, s, mode, mp, role) {
       const p2s = s.p2?.score || 0;
       const youWon = (role === 'host' && p1s > p2s) || (role === 'guest' && p2s > p1s);
       const youLost = (role === 'host' && p2s > p1s) || (role === 'guest' && p1s > p2s);
-      if (youWon) { ctx.fillStyle = '#4cd964'; ctx.fillText('You Win!', W / 2, H / 2 - 40); }
-      else if (youLost) { ctx.fillStyle = '#e74c3c'; ctx.fillText('You Lose!', W / 2, H / 2 - 40); }
-      else { ctx.fillStyle = 'white'; ctx.fillText('Tie!', W / 2, H / 2 - 40); }
-      ctx.fillStyle = 'white';
-      ctx.font = '20px system-ui, sans-serif';
-      ctx.fillText(`${p1s}  -  ${p2s}`, W / 2, H / 2 + 10);
+      ctx.font = `800 46px ${DISPLAY_FONT}`;
+      if (youWon) { ctx.fillStyle = PINK; ctx.fillText('you win', W / 2, H / 2 - 36); }
+      else if (youLost) { ctx.fillStyle = INK; ctx.fillText('you lose', W / 2, H / 2 - 36); }
+      else { ctx.fillStyle = BLUE; ctx.fillText('a tie', W / 2, H / 2 - 36); }
+
+      ctx.font = `italic 500 22px ${SERIF_FONT}`;
+      ctx.fillStyle = INK;
+      ctx.fillText(`${p1s}  ·  ${p2s}`, W / 2, H / 2 + 4);
     } else {
-      ctx.fillText('Game Over', W / 2, H / 2 - 40);
-      ctx.font = 'bold 28px system-ui, sans-serif';
-      ctx.fillText(s.p1.score, W / 2, H / 2 + 10);
+      ctx.font = `800 46px ${DISPLAY_FONT}`;
+      ctx.fillStyle = INK;
+      ctx.fillText('game over', W / 2, H / 2 - 36);
+      ctx.font = `800 32px ${DISPLAY_FONT}`;
+      ctx.fillStyle = PINK;
+      ctx.fillText(s.p1.score, W / 2, H / 2 + 6);
     }
 
-    ctx.fillStyle = 'white';
-    ctx.font = '16px system-ui, sans-serif';
+    ctx.font = `500 12px ${MONO_FONT}`;
+    ctx.fillStyle = INK;
     ctx.globalAlpha = 0.6;
-    ctx.fillText(`Best: ${s.highScore}`, W / 2, H / 2 + 40);
-    if (s.gameState === 'restart') ctx.fillText(`${actionWord} to restart`, W / 2, H / 2 + 70);
+    ctx.fillText(`best · ${s.highScore}`, W / 2, H / 2 + 40);
+    if (s.gameState === 'restart') {
+      ctx.font = `italic 500 14px ${SERIF_FONT}`;
+      ctx.fillText(`${actionWord} to restart`, W / 2, H / 2 + 64);
+    }
     ctx.globalAlpha = 1;
   }
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawCardOverlay(ctx) {
+  // soft cream wash so the canvas behind reads through faintly
+  ctx.fillStyle = 'rgba(244, 234, 213, 0.86)';
+  ctx.fillRect(0, 0, W, H);
+  // centered card with offset shadow
+  const cw = 280, ch = 200, cx = (W - cw) / 2, cy = (H - ch) / 2 - 10;
+  ctx.fillStyle = INK;
+  roundRect(ctx, cx + 6, cy + 6, cw, ch, 14);
+  ctx.fill();
+  ctx.fillStyle = PAPER;
+  roundRect(ctx, cx, cy, cw, ch, 14);
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+}
+
 function drawPipe(ctx, p) {
   const bottomY = p.topH + PIPE_GAP;
-  const capH = 20, capOverhang = 4;
-  ctx.fillStyle = '#2ecc40';
+  const capH = 22, capOverhang = 5;
+
+  // top pipe shaft
+  ctx.fillStyle = INK;
   ctx.fillRect(p.x, 0, PIPE_WIDTH, p.topH);
-  ctx.fillStyle = '#5eef70';
-  ctx.fillRect(p.x, 0, 5, p.topH);
-  ctx.fillStyle = '#1a9928';
-  ctx.fillRect(p.x + PIPE_WIDTH - 4, 0, 4, p.topH);
-  ctx.fillStyle = '#2ecc40';
+  dotGrid(ctx, p.x + 4, 0, PIPE_WIDTH - 8, p.topH, 'rgba(255, 216, 58, 0.45)', 5, 1.2);
+  // top pipe cap (pink stamp)
+  ctx.fillStyle = PINK;
   ctx.fillRect(p.x - capOverhang, p.topH - capH, PIPE_WIDTH + capOverhang * 2, capH);
-  ctx.fillStyle = '#5eef70';
-  ctx.fillRect(p.x - capOverhang, p.topH - capH, 5, capH);
-  ctx.fillStyle = '#2ecc40';
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = INK;
+  ctx.strokeRect(p.x - capOverhang + 0.75, p.topH - capH + 0.75, PIPE_WIDTH + capOverhang * 2 - 1.5, capH - 1.5);
+  // accent stripe inside cap
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(p.x - capOverhang + 5, p.topH - capH + 6, PIPE_WIDTH + capOverhang * 2 - 10, 3);
+
+  // shaft side outlines
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(p.x - 0.75, 0); ctx.lineTo(p.x - 0.75, p.topH - capH);
+  ctx.moveTo(p.x + PIPE_WIDTH + 0.75, 0); ctx.lineTo(p.x + PIPE_WIDTH + 0.75, p.topH - capH);
+  ctx.stroke();
+
+  // bottom pipe shaft
+  ctx.fillStyle = INK;
   ctx.fillRect(p.x, bottomY, PIPE_WIDTH, H - bottomY);
-  ctx.fillStyle = '#5eef70';
-  ctx.fillRect(p.x, bottomY, 5, H - bottomY);
-  ctx.fillStyle = '#1a9928';
-  ctx.fillRect(p.x + PIPE_WIDTH - 4, bottomY, 4, H - bottomY);
-  ctx.fillStyle = '#2ecc40';
+  dotGrid(ctx, p.x + 4, bottomY, PIPE_WIDTH - 8, H - bottomY, 'rgba(255, 216, 58, 0.45)', 5, 1.2);
+  // bottom cap
+  ctx.fillStyle = PINK;
   ctx.fillRect(p.x - capOverhang, bottomY, PIPE_WIDTH + capOverhang * 2, capH);
-  ctx.fillStyle = '#5eef70';
-  ctx.fillRect(p.x - capOverhang, bottomY, 5, capH);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = INK;
+  ctx.strokeRect(p.x - capOverhang + 0.75, bottomY + 0.75, PIPE_WIDTH + capOverhang * 2 - 1.5, capH - 1.5);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(p.x - capOverhang + 5, bottomY + capH - 9, PIPE_WIDTH + capOverhang * 2 - 10, 3);
+
+  ctx.beginPath();
+  ctx.moveTo(p.x - 0.75, bottomY + capH); ctx.lineTo(p.x - 0.75, H);
+  ctx.moveTo(p.x + PIPE_WIDTH + 0.75, bottomY + capH); ctx.lineTo(p.x + PIPE_WIDTH + 0.75, H);
+  ctx.stroke();
 }
 
 function drawBird(ctx, bird, colors) {
   ctx.save();
   ctx.translate(bird.x, bird.y);
   ctx.rotate(Math.min(Math.max(bird.vy * 3, -30), 70) * (Math.PI / 180));
+
+  // wing (back)
   ctx.fillStyle = colors.wing;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.ellipse(-4, bird.flapFrame > 0 ? -8 : 4, 12, 7, -0.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.stroke();
+
+  // body
   ctx.fillStyle = colors.body;
   ctx.beginPath();
   ctx.ellipse(0, 0, BIRD_RADIUS + 4, BIRD_RADIUS, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'white';
+  ctx.stroke();
+
+  // halftone belly
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 4, BIRD_RADIUS + 1, BIRD_RADIUS - 4, 0, 0, Math.PI * 2);
+  ctx.clip();
+  dotGrid(ctx, -BIRD_RADIUS, -BIRD_RADIUS, BIRD_RADIUS * 2 + 8, BIRD_RADIUS * 2, 'rgba(24,20,16,0.25)', 4, 0.9);
+  ctx.restore();
+
+  // eye
+  ctx.fillStyle = PAPER;
   ctx.beginPath();
   ctx.arc(10, -6, 7, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#222';
+  ctx.stroke();
+  ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.arc(12, -5, 3.5, 0, Math.PI * 2);
   ctx.fill();
+
+  // beak
   ctx.fillStyle = colors.beak;
   ctx.beginPath();
   ctx.moveTo(18, -2); ctx.lineTo(28, 3); ctx.lineTo(18, 8);
   ctx.closePath();
   ctx.fill();
+  ctx.stroke();
+
   ctx.restore();
 }
 
 function drawGhost(ctx, bird, colors) {
   ctx.save();
-  ctx.globalAlpha = 0.25;
+  ctx.globalAlpha = 0.3;
   drawBird(ctx, bird, colors);
   ctx.restore();
 }
