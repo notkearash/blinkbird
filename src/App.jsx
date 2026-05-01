@@ -44,7 +44,7 @@ function App() {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [activeGame, setActiveGame] = useState(null);
-  const [gameState, setGameState] = useState('loading');
+  const [gameState, setGameState] = useState('waiting');
   const [mode, setMode] = useState('blink');
   const [multiplayer, setMultiplayer] = useState(false);
   const [route, setRoute] = useState(parseRoute);
@@ -54,12 +54,18 @@ function App() {
   const auth = useAuth();
   const mp = useMultiplayer();
 
+  const inRoom = route.page === 'room';
+  // Camera + MediaPipe only spin up when the user has actually committed
+  // to play (picked a game, or landed inside a room URL). The marketing
+  // pages stay zero-permission.
+  const needsCamera = activeGame !== null || inRoom;
+
   const {
     isReady, error,
     p1Triggered,
     setOnBlink,
     setOnHeadSwipe,
-  } = useFaceDetection(videoRef, mode, false);
+  } = useFaceDetection(videoRef, mode, false, needsCamera);
 
   useEffect(() => {
     const onPop = () => setRoute(parseRoute());
@@ -78,29 +84,33 @@ function App() {
   }, [auth.user]);
 
   useEffect(() => {
+    if (!needsCamera) return;
+    if (videoRef.current?.srcObject) return; // already started
+    let cancelled = false;
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' },
         });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
-        setCameraError(err.message);
+        if (!cancelled) setCameraError(err.message);
       }
     }
     startCamera();
-  }, []);
+    return () => { cancelled = true; };
+  }, [needsCamera]);
 
   const handleVideoLoaded = useCallback(() => setCameraReady(true), []);
 
-  useEffect(() => {
-    if (isReady) setGameState('waiting');
-  }, [isReady]);
-
-  const inRoom = route.page === 'room';
+  const showLoading = needsCamera && !isReady;
   const inLobby = inRoom && !activeGame;
-  const onLanding = route.page === 'landing' && !activeGame && gameState !== 'loading';
-  const onPlayPage = route.page === 'play' && !activeGame && gameState !== 'loading';
+  const onLanding = route.page === 'landing' && !activeGame;
+  const onPlayPage = route.page === 'play' && !activeGame;
   const isMarketing = onLanding || onPlayPage;
 
   useEffect(() => {
@@ -165,22 +175,6 @@ function App() {
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
       />
 
-      {gameState === 'loading' && (
-        <div className="loading-screen">
-          <h1>BlinkBird</h1>
-          <div className="spinner" />
-          <p>
-            {cameraError
-              ? `Camera error: ${cameraError}`
-              : error
-                ? `Model error: ${error}`
-                : !cameraReady
-                  ? 'Starting camera...'
-                  : 'Loading face detection...'}
-          </p>
-        </div>
-      )}
-
       {onLanding && (
         <Landing auth={auth} onPlay={goToPlay} />
       )}
@@ -196,7 +190,23 @@ function App() {
         />
       )}
 
-      {gameState !== 'loading' && inLobby && (
+      {showLoading && (
+        <div className="loading-screen">
+          <h1>blinkbird</h1>
+          <div className="spinner" />
+          <p>
+            {cameraError
+              ? `Camera blocked: ${cameraError}`
+              : error
+                ? `Model error: ${error}`
+                : !cameraReady
+                  ? 'Asking your browser for the camera…'
+                  : 'Loading the face model… (lives on your machine)'}
+          </p>
+        </div>
+      )}
+
+      {!showLoading && inLobby && (
         <Lobby
           auth={auth}
           mp={mp}
@@ -207,7 +217,7 @@ function App() {
         />
       )}
 
-      {gameState !== 'loading' && activeGame === 'flappy' && (
+      {!showLoading && activeGame === 'flappy' && (
         <Game
           setOnBlink={setOnBlink}
           p1Triggered={p1Triggered}
@@ -222,7 +232,7 @@ function App() {
         />
       )}
 
-      {gameState !== 'loading' && activeGame === 'runner' && (
+      {!showLoading && activeGame === 'runner' && (
         <Runner
           setOnHeadSwipe={setOnHeadSwipe}
           gameState={gameState}

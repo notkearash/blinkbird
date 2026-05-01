@@ -93,7 +93,7 @@ function processPlayer(ps, lm, blendshapes, mode, onTrigger, onHeadSwipe) {
   return triggered;
 }
 
-export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false) {
+export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false, enabled = true) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
   const [p1Triggered, setP1Triggered] = useState(false);
@@ -122,6 +122,7 @@ export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false) 
   const setOnP2HeadSwipe = useCallback((fn) => { onP2HeadSwipeRef.current = fn; }, []);
 
   useEffect(() => {
+    if (!enabled || landmarkerRef.current) return;
     let cancelled = false;
 
     async function init() {
@@ -152,10 +153,10 @@ export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false) 
 
     init();
     return () => { cancelled = true; };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!isReady || !videoRef.current) return;
+    if (!enabled || !isReady || !videoRef.current) return;
 
     let lastTime = -1;
 
@@ -220,7 +221,7 @@ export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false) 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isReady, videoRef]);
+  }, [enabled, isReady, videoRef]);
 
   return {
     isReady, error, faceCount,
