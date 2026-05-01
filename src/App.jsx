@@ -361,6 +361,12 @@ function Lobby({ auth, mp, roomId, game, onStart, onBack }) {
       )}
 
       {mp.error && <p className="lobby-error">{mp.error}</p>}
+
+      <p className="lobby-priv">
+        <span className="lobby-priv-label">privacy</span>
+        moves are forwarded peer-to-peer through a Cloudflare Durable Object. nothing is logged or stored.
+      </p>
+
       <button className="lobby-back" onClick={onBack}>Back</button>
     </div>
   );

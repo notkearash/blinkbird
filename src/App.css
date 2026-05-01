@@ -561,3 +561,34 @@ body.body--landing::before {
   text-transform: uppercase;
   opacity: 0.6;
 }
+
+/* lobby privacy callout */
+.lobby-priv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--green) 10%, var(--paper));
+  font-family: var(--serif);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--ink);
+}
+
+.lobby-priv-label {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  align-self: center;
+}
