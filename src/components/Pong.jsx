@@ -32,9 +32,10 @@ const BALL_R = 14;
 const HAND_AMP = 1.7;   // amplifies hand motion so the user doesn't need to fully extend
 const PADDLE_LERP = 0.32;
 
-const BALL_SPEEDUP = 1.045;
-const BALL_VZ_INIT = 8;
+const BALL_SPEEDUP = 1.07;
+const BALL_VZ_INIT = 3.5;
 const BALL_VZ_MAX = 22;
+const BALL_VXY_INIT = 1.0; // half-range for random initial sideways drift
 
 function project(x, y, d) {
   const dd = Math.max(40, d); // avoid div-by-zero / hyperscale near camera
@@ -49,8 +50,8 @@ function spawnBall() {
     x: 0,
     y: 0,
     z: PADDLE_D + 80,
-    vx: (Math.random() - 0.5) * 4,
-    vy: (Math.random() - 0.5) * 3,
+    vx: (Math.random() - 0.5) * 2 * BALL_VXY_INIT,
+    vy: (Math.random() - 0.5) * 2 * BALL_VXY_INIT,
     vz: BALL_VZ_INIT,
   };
 }
