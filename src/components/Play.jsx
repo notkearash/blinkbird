@@ -39,6 +39,15 @@ export default function Play({ auth, creating, createError, onSolo, onCreateRoom
           onMp={() => onCreateRoom('runner')}
           creating={creating}
         />
+        <GameCard
+          accent="pink"
+          title="Hand Pong"
+          subtitle="palm = paddle"
+          rule="first-person squash. open hand to the cam. keep the ball alive."
+          art={<PongArt />}
+          onSolo={() => onSolo('pong')}
+          creating={creating}
+        />
       </section>
 
       {createError && <p className="pp-error">! {createError}</p>}
@@ -102,9 +111,13 @@ function GameCard({ accent, title, subtitle, rule, art, onSolo, onMp, creating }
             <span>play solo</span>
             <span className="pp-btn-arrow">→</span>
           </button>
-          <button className="pp-btn pp-btn-ghost" disabled={creating} onClick={onMp}>
-            {creating ? 'opening room…' : '2p · create room'}
-          </button>
+          {onMp ? (
+            <button className="pp-btn pp-btn-ghost" disabled={creating} onClick={onMp}>
+              {creating ? 'opening room…' : '2p · create room'}
+            </button>
+          ) : (
+            <span className="pp-btn pp-btn-ghost pp-btn-disabled" aria-disabled="true">solo only</span>
+          )}
         </div>
       </div>
     </article>
@@ -147,6 +160,38 @@ function FlappyArt() {
         <circle cx="4" cy="-3" r="3" fill="#181410" />
         <path d="M12 1 L22 3 L12 6 Z" fill="#ff3d8a" stroke="#181410" strokeWidth="2" strokeLinejoin="round" />
         <path d="M-10 1 Q -4 12 4 6" stroke="#181410" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+function PongArt() {
+  return (
+    <svg viewBox="0 0 220 160" className="pp-art" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="pp-halftone-pong" patternUnits="userSpaceOnUse" width="6" height="6">
+          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
+        </pattern>
+      </defs>
+      <rect x="0" y="0" width="220" height="160" fill="url(#pp-halftone-pong)" opacity="0.32" />
+      {/* corridor lines into the vanishing point */}
+      <path
+        d="M0 0 L96 70 M220 0 L124 70 M0 160 L96 90 M220 160 L124 90 M96 70 L124 70 L124 90 L96 90 Z"
+        stroke="currentColor"
+        strokeWidth="3"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      {/* back wall halftone fill */}
+      <rect x="96" y="70" width="28" height="20" fill="#1f3df0" opacity="0.22" />
+      {/* paddle in front */}
+      <rect x="68" y="98" width="84" height="38" rx="6" fill="#ff3a86" stroke="#181410" strokeWidth="3" />
+      <rect x="104" y="106" width="12" height="22" fill="#f4ead5" stroke="#181410" strokeWidth="2" />
+      {/* ball mid-flight */}
+      <circle cx="138" cy="64" r="9" fill="#ffe14a" stroke="#181410" strokeWidth="2.5" />
+      {/* hand silhouette top-left */}
+      <g transform="translate(20 24)" stroke="#181410" strokeWidth="2.5" fill="#f4ead5" strokeLinejoin="round">
+        <path d="M0 18 L0 4 Q0 0 4 0 Q8 0 8 4 L8 14 L11 14 L11 2 Q11 -2 15 -2 Q19 -2 19 2 L19 14 L22 14 L22 4 Q22 0 26 0 Q30 0 30 4 L30 14 L33 14 L33 8 Q33 4 37 4 Q41 4 41 8 L41 24 Q41 36 28 36 L10 36 Q0 36 0 26 Z" />
       </g>
     </svg>
   );
