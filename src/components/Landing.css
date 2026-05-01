@@ -131,6 +131,28 @@
   color: var(--ink) !important;
 }
 
+.lp-top-play {
+  border: 1.5px solid var(--ink);
+  padding: 6px 14px;
+  background: var(--pink);
+  color: var(--paper);
+  border-radius: 999px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: lowercase;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.lp-top-play:hover {
+  background: var(--ink);
+  color: var(--paper);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
 /* auth chip in nav */
 .lp-chip {
   display: inline-flex;
