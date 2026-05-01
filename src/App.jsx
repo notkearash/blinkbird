@@ -11,6 +11,7 @@ import Play from './components/Play';
 import './App.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SOLO_RE = /^\/(flappy|runner|pong)\/?$/;
 
 // Safety net: if React ever boots at an /api/ path (e.g., user hit Back after an
 // OAuth hop), rewrite to / so we don't stuff an /api/ URL into return_to and
@@ -33,6 +34,10 @@ function parseRoute() {
   if (/^\/play\/?$/.test(location.pathname)) {
     return { page: 'play', roomId: null, game: null };
   }
+  const solo = location.pathname.match(SOLO_RE);
+  if (solo) {
+    return { page: 'solo', roomId: null, game: solo[1] };
+  }
   return { page: 'landing', roomId: null, game: null };
 }
 
@@ -45,11 +50,14 @@ function App() {
   const videoRef = useRef(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
-  const [activeGame, setActiveGame] = useState(null);
+  const [route, setRoute] = useState(parseRoute);
+  const [activeGame, setActiveGame] = useState(() => {
+    const r = parseRoute();
+    return r.page === 'solo' ? r.game : null;
+  });
   const [gameState, setGameState] = useState('waiting');
   const [mode, setMode] = useState('blink');
   const [multiplayer, setMultiplayer] = useState(false);
-  const [route, setRoute] = useState(parseRoute);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
 
@@ -79,6 +87,19 @@ function App() {
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);
+
+  // Sync active game with the URL: /pong → solo pong, /play or / → drop game.
+  // Multiplayer rooms keep their own activeGame flow via the lobby.
+  useEffect(() => {
+    if (route.page === 'solo' && route.game) {
+      setMultiplayer(false);
+      setActiveGame(route.game);
+      setGameState('waiting');
+    } else if (route.page === 'play' || route.page === 'landing') {
+      setActiveGame(null);
+      setMultiplayer(false);
+    }
+  }, [route.page, route.game]);
 
   useEffect(() => {
     if (!auth.user) return;
@@ -131,6 +152,7 @@ function App() {
     setMultiplayer(false);
     setActiveGame(game);
     setGameState('waiting');
+    navigateTo(`/${game}`);
   }
 
   async function createRoom(game) {
