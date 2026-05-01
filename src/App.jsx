@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth';
 import Game from './components/Game';
 import Runner from './components/Runner';
 import Landing from './components/Landing';
+import Play from './components/Play';
 import './App.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,14 +18,20 @@ if (typeof location !== 'undefined' && location.pathname.startsWith('/api/')) {
 }
 
 function parseRoute() {
-  const m = location.pathname.match(/^\/r\/([^/]+)\/?$/);
-  if (!m || !UUID_RE.test(m[1])) return { roomId: null, game: null };
-  const params = new URLSearchParams(location.search);
-  const game = params.get('game');
-  return {
-    roomId: m[1],
-    game: game === 'flappy' || game === 'runner' ? game : null,
-  };
+  const room = location.pathname.match(/^\/r\/([^/]+)\/?$/);
+  if (room && UUID_RE.test(room[1])) {
+    const params = new URLSearchParams(location.search);
+    const game = params.get('game');
+    return {
+      page: 'room',
+      roomId: room[1],
+      game: game === 'flappy' || game === 'runner' ? game : null,
+    };
+  }
+  if (/^\/play\/?$/.test(location.pathname)) {
+    return { page: 'play', roomId: null, game: null };
+  }
+  return { page: 'landing', roomId: null, game: null };
 }
 
 function navigateTo(path) {
@@ -65,6 +72,7 @@ function App() {
     const params = new URLSearchParams(location.search);
     const game = params.get('create');
     if (game !== 'flappy' && game !== 'runner') return;
+    if (location.pathname !== '/play') navigateTo(`/play?create=${game}`);
     createRoom(game);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.user]);
@@ -89,14 +97,16 @@ function App() {
     if (isReady) setGameState('waiting');
   }, [isReady]);
 
-  const inRoom = Boolean(route.roomId);
+  const inRoom = route.page === 'room';
   const inLobby = inRoom && !activeGame;
-  const onLanding = !inRoom && !activeGame && gameState !== 'loading';
+  const onLanding = route.page === 'landing' && !activeGame && gameState !== 'loading';
+  const onPlayPage = route.page === 'play' && !activeGame && gameState !== 'loading';
+  const isMarketing = onLanding || onPlayPage;
 
   useEffect(() => {
-    document.body.classList.toggle('body--landing', onLanding);
+    document.body.classList.toggle('body--landing', isMarketing);
     return () => document.body.classList.remove('body--landing');
-  }, [onLanding]);
+  }, [isMarketing]);
 
   function startSolo(game) {
     setMultiplayer(false);
@@ -107,7 +117,7 @@ function App() {
   async function createRoom(game) {
     if (auth.loading) return;
     if (!auth.user) {
-      auth.signIn(`/?create=${game}`);
+      auth.signIn(`/play?create=${game}`);
       return;
     }
     setCreating(true);
@@ -138,11 +148,14 @@ function App() {
     setMultiplayer(false);
     mp.disconnect();
     setGameState('waiting');
-    if (location.pathname !== '/') navigateTo('/');
+    navigateTo('/play');
   }, [mp]);
 
+  const goToPlay = useCallback(() => navigateTo('/play'), []);
+  const goToLanding = useCallback(() => navigateTo('/'), []);
+
   return (
-    <div className={`app${onLanding ? ' app--landing' : ''}`}>
+    <div className={`app${isMarketing ? ' app--landing' : ''}`}>
       <video
         ref={videoRef}
         autoPlay
@@ -169,12 +182,17 @@ function App() {
       )}
 
       {onLanding && (
-        <Landing
+        <Landing auth={auth} onPlay={goToPlay} />
+      )}
+
+      {onPlayPage && (
+        <Play
           auth={auth}
           creating={creating}
           createError={createError}
           onSolo={startSolo}
           onCreateRoom={createRoom}
+          onBack={goToLanding}
         />
       )}
 
@@ -343,6 +361,12 @@ function Lobby({ auth, mp, roomId, game, onStart, onBack }) {
       )}
 
       {mp.error && <p className="lobby-error">{mp.error}</p>}
+
+      <p className="lobby-priv">
+        <span className="lobby-priv-label">privacy</span>
+        moves are forwarded peer-to-peer through a Cloudflare Durable Object. nothing is logged or stored.
+      </p>
+
       <button className="lobby-back" onClick={onBack}>Back</button>
     </div>
   );

@@ -1,0 +1,445 @@
+/* ===========================================================================
+   /play — game picker page (multipage flow)
+   inherits the riso-zine palette from the landing
+   =========================================================================== */
+
+.pp {
+  --ink:    #181410;
+  --paper:  #f4ead5;
+  --paper-2:#ece1c8;
+  --pink:   #ff3a86;
+  --blue:   #1f3df0;
+  --yellow: #ffd83a;
+  --green:  #1aa672;
+  --rule:   rgba(24, 20, 16, 0.16);
+
+  --display: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif;
+  --serif:   'Newsreader', 'Times New Roman', serif;
+  --mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--display);
+  overflow-x: clip;
+  isolation: isolate;
+  padding-bottom: 60px;
+}
+
+.pp ::selection {
+  background: var(--pink);
+  color: var(--paper);
+}
+
+:where(.pp) a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+:where(.pp) a:hover {
+  color: var(--pink);
+}
+
+.pp-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(24, 20, 16, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(24, 20, 16, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+}
+
+/* ---------- top bar ---------- */
+.pp-top {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 32px;
+  border-bottom: 1.5px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: lowercase;
+}
+
+.pp-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.pp-back:hover {
+  background: var(--yellow);
+  transform: translate(-2px, 0);
+}
+
+.pp-top-mid {
+  justify-self: center;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pp-top-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pink);
+  display: inline-block;
+  transform: translateY(-1px);
+}
+
+.pp-top-word {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.pp-top-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.pp-chip {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.pp-chip-muted {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pp-chip-signin:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pp-chip-user img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+}
+
+.pp-chip-out {
+  border: none;
+  background: none;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 0 0 4px;
+  opacity: 0.5;
+}
+
+.pp-chip-out:hover {
+  opacity: 1;
+  color: var(--pink);
+}
+
+/* ---------- hero ---------- */
+.pp-hero {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 56px 32px 28px;
+}
+
+.pp-stamp {
+  display: inline-block;
+  padding: 5px 11px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: var(--yellow);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  transform: rotate(-1.4deg);
+  box-shadow: 3px 3px 0 var(--ink);
+  margin-bottom: 24px;
+}
+
+.pp-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(48px, 9vw, 132px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-transform: lowercase;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.16em;
+}
+
+.pp-title-fill {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.02em 0.18em 0.04em;
+  border-radius: 6px;
+}
+
+.pp-title-italic {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--blue);
+  letter-spacing: -0.03em;
+}
+
+.pp-sub {
+  max-width: 64ch;
+  font-family: var(--serif);
+  font-size: clamp(15px, 1.2vw, 18px);
+  line-height: 1.55;
+}
+
+.pp-sub em {
+  font-style: italic;
+  color: var(--blue);
+}
+
+.pp-sub strong {
+  font-weight: 600;
+  background: var(--yellow);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+/* ---------- game grid ---------- */
+.pp-grid {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.pp-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pp-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.pp-card-pink .pp-card-art { background: var(--pink); color: var(--paper); }
+.pp-card-blue .pp-card-art { background: var(--blue); color: var(--paper); }
+
+.pp-card-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  border-bottom: 1.5px solid var(--ink);
+  overflow: hidden;
+}
+
+.pp-art {
+  width: 80%;
+  height: auto;
+}
+
+.pp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 26px 26px;
+}
+
+.pp-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pp-card-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 38px;
+  letter-spacing: -0.03em;
+  text-transform: lowercase;
+  line-height: 1;
+}
+
+.pp-card-sub {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  opacity: 0.75;
+}
+
+.pp-card-rule {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.pp-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.pp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.pp-btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pp-btn-primary:hover {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.pp-btn-ghost:hover {
+  background: var(--paper-2);
+}
+
+.pp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.pp-btn-arrow {
+  font-size: 16px;
+  transition: transform 0.18s;
+}
+
+.pp-btn:hover .pp-btn-arrow {
+  transform: translateX(3px);
+}
+
+.pp-error {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 14px auto 0;
+  padding: 0 32px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--pink);
+}
+
+/* ---------- privacy strip ---------- */
+.pp-privacy {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 36px auto 0;
+  padding: 18px 22px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--green) 12%, var(--paper));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.pp-privacy-label {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pp-privacy p {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.pp-privacy strong {
+  font-weight: 600;
+  background: var(--yellow);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.pp-privacy-sep {
+  margin: 0 8px;
+  opacity: 0.4;
+}
+
+@media (max-width: 900px) {
+  .pp-grid { grid-template-columns: 1fr; padding: 8px 18px; }
+  .pp-hero { padding: 36px 18px 18px; }
+  .pp-top { padding: 14px 16px; grid-template-columns: 1fr 1fr; }
+  .pp-top-mid { display: none; }
+  .pp-privacy { grid-template-columns: 1fr; }
+}

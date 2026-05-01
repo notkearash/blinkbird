@@ -2,30 +2,26 @@ import './Landing.css';
 
 const TICKER = [
   'no hands required',
+  'no database',
+  'no email asked',
+  'no telemetry',
   'open source',
-  'works in your browser',
-  'multiplayer over webrtc',
   'face on, ego off',
-  'built in a weekend',
   'mediapipe inside',
   'blink ➝ flap',
   'tilt ➝ dodge',
+  'mit licensed',
 ];
 
-export default function Landing({ auth, creating, createError, onSolo, onCreateRoom }) {
+export default function Landing({ auth, onPlay }) {
   return (
     <main className="lp">
       <Grain />
-      <TopBar auth={auth} />
-      <Hero />
+      <TopBar auth={auth} onPlay={onPlay} />
+      <Hero onPlay={onPlay} />
       <Ticker items={TICKER} />
-      <PlaySection
-        creating={creating}
-        createError={createError}
-        onSolo={onSolo}
-        onCreateRoom={onCreateRoom}
-      />
       <HowItWorks />
+      <Privacy />
       <Manifesto />
       <OpenSource />
       <Footer />
@@ -37,7 +33,7 @@ function Grain() {
   return <div className="lp-grain" aria-hidden="true" />;
 }
 
-function TopBar({ auth }) {
+function TopBar({ auth, onPlay }) {
   return (
     <header className="lp-top">
       <div className="lp-top-left">
@@ -48,8 +44,8 @@ function TopBar({ auth }) {
         <span className="lp-mark-tag">v0.1 / public beta</span>
       </div>
       <nav className="lp-top-nav">
-        <a href="#play">play</a>
         <a href="#how">how</a>
+        <a href="#privacy">privacy</a>
         <a href="#why">why</a>
         <a
           href="https://github.com/notkearash/blinkbird"
@@ -59,6 +55,7 @@ function TopBar({ auth }) {
         >
           github ↗
         </a>
+        <button className="lp-top-play" onClick={onPlay}>play ↗</button>
         <AuthChip auth={auth} />
       </nav>
     </header>
@@ -83,7 +80,7 @@ function AuthChip({ auth }) {
   );
 }
 
-function Hero() {
+function Hero({ onPlay }) {
   return (
     <section className="lp-hero">
       <div className="lp-hero-meta">
@@ -114,10 +111,10 @@ function Hero() {
           <strong> Tilt your head</strong> to dodge. No download, no login —
           just a tab, a face, and questionable life choices.
         </p>
-        <a href="#play" className="lp-cta">
+        <button className="lp-cta" onClick={onPlay}>
           <span>pick your game</span>
-          <span className="lp-cta-arrow">↘</span>
-        </a>
+          <span className="lp-cta-arrow">↗</span>
+        </button>
       </div>
 
       <div className="lp-hero-strip">
@@ -155,81 +152,11 @@ function Ticker({ items }) {
   );
 }
 
-function PlaySection({ creating, createError, onSolo, onCreateRoom }) {
-  return (
-    <section id="play" className="lp-play">
-      <SectionHead
-        index="01"
-        kicker="the menu"
-        title={<>pick a game.<br /><em>commit a face.</em></>}
-      />
-
-      <div className="lp-games">
-        <GameCard
-          accent="pink"
-          title="Flappy Bird"
-          subtitle="blink to flap"
-          tag="single blink = single flap"
-          art={<FlappyArt />}
-          onSolo={() => onSolo('flappy')}
-          onMp={() => onCreateRoom('flappy')}
-          creating={creating}
-        />
-        <GameCard
-          accent="blue"
-          title="Lane Runner"
-          subtitle="tilt your head"
-          tag="left ⇆ right swipes via face"
-          art={<RunnerArt />}
-          onSolo={() => onSolo('runner')}
-          onMp={() => onCreateRoom('runner')}
-          creating={creating}
-        />
-      </div>
-
-      {createError && <p className="lp-error">! {createError}</p>}
-
-      <p className="lp-play-foot">
-        2-player needs a GitHub login so we can pin you to your room. Solo play needs nothing
-        but a webcam and the will to look weird at your laptop.
-      </p>
-    </section>
-  );
-}
-
-function GameCard({ accent, title, subtitle, tag, art, onSolo, onMp, creating }) {
-  return (
-    <article className={`lp-card lp-card-${accent}`}>
-      <div className="lp-card-art">{art}</div>
-      <div className="lp-card-body">
-        <header className="lp-card-head">
-          <h3 className="lp-card-title">{title}</h3>
-          <span className="lp-card-sub">{subtitle}</span>
-        </header>
-        <p className="lp-card-tag">{tag}</p>
-        <div className="lp-card-actions">
-          <button className="lp-btn lp-btn-primary" onClick={onSolo}>
-            <span>play solo</span>
-            <span className="lp-btn-arrow">→</span>
-          </button>
-          <button
-            className="lp-btn lp-btn-ghost"
-            disabled={creating}
-            onClick={onMp}
-          >
-            {creating ? 'opening room…' : '2P online · create room'}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function HowItWorks() {
   return (
     <section id="how" className="lp-how">
       <SectionHead
-        index="02"
+        index="01"
         kicker="the wiring"
         title={<>three steps. <em>zero plug-ins.</em></>}
       />
@@ -266,6 +193,95 @@ function Step({ n, title, body }) {
   );
 }
 
+function Privacy() {
+  return (
+    <section id="privacy" className="lp-privacy">
+      <SectionHead
+        index="02"
+        kicker="the receipts"
+        title={<>no DB. no emails. <em>no bullshit.</em></>}
+      />
+
+      <div className="lp-privacy-grid">
+        <article className="lp-priv-col lp-priv-no">
+          <header className="lp-priv-head">
+            <span className="lp-priv-tag lp-priv-tag-no">we don't have</span>
+          </header>
+          <ul className="lp-priv-list">
+            <PrivItem icon="✕" label="your email" body="we ask GitHub for read:user only — no email scope." />
+            <PrivItem icon="✕" label="a database" body="zero KV, zero D1, zero R2. the wrangler.toml is open." />
+            <PrivItem icon="✕" label="your face data" body="MediaPipe runs on your machine. video never leaves the tab." />
+            <PrivItem icon="✕" label="your IP / analytics" body="no GA, no Plausible, no Vercel Analytics. nothing." />
+            <PrivItem icon="✕" label="your high scores" body="local to your browser. we don't sync them anywhere." />
+            <PrivItem icon="✕" label="your messages" body="2P moves are forwarded peer-to-peer through a Durable Object. nothing is logged or stored." />
+          </ul>
+        </article>
+
+        <article className="lp-priv-col lp-priv-yes">
+          <header className="lp-priv-head">
+            <span className="lp-priv-tag lp-priv-tag-yes">we do have</span>
+          </header>
+          <ul className="lp-priv-list">
+            <PrivItem
+              icon="✓"
+              label="a signed cookie"
+              body="HttpOnly, SameSite=Lax, 30 days. payload: your GitHub id, login, name, avatar. signed with HMAC so nobody can forge it. lives on YOUR machine."
+              accent
+            />
+          </ul>
+          <p className="lp-priv-note">
+            That's it. That's the entire user-data surface.
+          </p>
+        </article>
+      </div>
+
+      <aside className="lp-priv-receipts">
+        <header>
+          <span className="lp-priv-receipts-mark">$</span>
+          <span className="lp-priv-receipts-title">read the worker yourself</span>
+        </header>
+        <pre className="lp-priv-code"><code>{`// worker/session.js — the entire "session store"
+export async function makeSession(user, secret) {
+  const payload = {
+    id: user.id,
+    login: user.login,
+    name: user.name || user.login,
+    avatar: user.avatar_url,
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+  };
+  return sign(payload, secret); // HMAC, returned as a cookie
+}`}</code></pre>
+        <div className="lp-priv-links">
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/index.js" target="_blank" rel="noreferrer noopener">
+            worker/index.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/session.js" target="_blank" rel="noreferrer noopener">
+            worker/session.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/room.js" target="_blank" rel="noreferrer noopener">
+            worker/room.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/wrangler.toml" target="_blank" rel="noreferrer noopener">
+            wrangler.toml
+          </a>
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function PrivItem({ icon, label, body, accent }) {
+  return (
+    <li className={`lp-priv-item${accent ? ' lp-priv-item-accent' : ''}`}>
+      <span className="lp-priv-icon" aria-hidden="true">{icon}</span>
+      <div>
+        <span className="lp-priv-label">{label}</span>
+        <span className="lp-priv-body">{body}</span>
+      </div>
+    </li>
+  );
+}
+
 function Manifesto() {
   return (
     <section id="why" className="lp-why">
@@ -290,6 +306,7 @@ function OpenSource() {
         kicker="free, open, weird"
         title={<>fork it. break it. <em>send a PR.</em></>}
       />
+
       <div className="lp-oss-grid">
         <div className="lp-oss-card">
           <h4>MIT licensed</h4>
@@ -399,59 +416,3 @@ function Eye({ size = 64, blink = false, delay = '0s' }) {
   );
 }
 
-function FlappyArt() {
-  return (
-    <svg viewBox="0 0 220 160" className="lp-art lp-art-flappy" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="halftone-pink" patternUnits="userSpaceOnUse" width="6" height="6">
-          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
-        </pattern>
-      </defs>
-      <rect x="0" y="0" width="220" height="160" fill="url(#halftone-pink)" opacity="0.35" />
-      {/* pipes */}
-      <rect x="40" y="0" width="36" height="46" fill="currentColor" />
-      <rect x="36" y="42" width="44" height="10" fill="currentColor" />
-      <rect x="40" y="110" width="36" height="50" fill="currentColor" />
-      <rect x="36" y="100" width="44" height="10" fill="currentColor" />
-      <rect x="150" y="0" width="36" height="80" fill="currentColor" />
-      <rect x="146" y="76" width="44" height="10" fill="currentColor" />
-      <rect x="150" y="142" width="36" height="18" fill="currentColor" />
-      <rect x="146" y="132" width="44" height="10" fill="currentColor" />
-      {/* bird */}
-      <g transform="translate(108 78) rotate(-12)">
-        <circle cx="0" cy="0" r="14" fill="#ffe14a" stroke="#181410" strokeWidth="3" />
-        <circle cx="4" cy="-3" r="3" fill="#181410" />
-        <path d="M12 1 L22 3 L12 6 Z" fill="#ff3d8a" stroke="#181410" strokeWidth="2" strokeLinejoin="round" />
-        <path d="M-10 1 Q -4 12 4 6" stroke="#181410" strokeWidth="3" fill="none" strokeLinecap="round" />
-      </g>
-    </svg>
-  );
-}
-
-function RunnerArt() {
-  return (
-    <svg viewBox="0 0 220 160" className="lp-art lp-art-runner" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="halftone-blue" patternUnits="userSpaceOnUse" width="6" height="6">
-          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
-        </pattern>
-      </defs>
-      <rect x="0" y="0" width="220" height="160" fill="url(#halftone-blue)" opacity="0.3" />
-      {/* lanes converging */}
-      <path d="M30 158 L92 12 M110 158 L110 12 M190 158 L128 12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M30 158 L92 12" stroke="currentColor" strokeWidth="3" strokeDasharray="6 8" />
-      <path d="M190 158 L128 12" stroke="currentColor" strokeWidth="3" strokeDasharray="6 8" />
-      {/* obstacles */}
-      <rect x="92" y="44" width="20" height="14" fill="#ff3d8a" stroke="#181410" strokeWidth="2" />
-      <rect x="56" y="80" width="28" height="16" fill="#ffe14a" stroke="#181410" strokeWidth="2" />
-      <rect x="138" y="70" width="24" height="14" fill="#ffe14a" stroke="#181410" strokeWidth="2" />
-      {/* runner */}
-      <g transform="translate(108 122)">
-        <circle cx="0" cy="-12" r="10" fill="#181410" />
-        <rect x="-9" y="-2" width="18" height="22" rx="3" fill="#181410" />
-        <rect x="-12" y="2" width="6" height="14" rx="2" fill="#181410" transform="rotate(-15 -9 9)" />
-        <rect x="6" y="2" width="6" height="14" rx="2" fill="#181410" transform="rotate(15 9 9)" />
-      </g>
-    </svg>
-  );
-}
