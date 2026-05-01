@@ -30,7 +30,9 @@ const PADDLE_HH = 32;   // half-height
 const BALL_R = 14;
 
 const HAND_AMP = 2.5;   // amplifies hand motion so the user doesn't need to fully extend
-const PADDLE_LERP = 0.32;
+// Higher = snappier paddle (less lag) but more jitter. 0.6 reaches 90% of the
+// target in ~42ms at 60Hz, vs ~100ms at 0.32.
+const PADDLE_LERP = 0.6;
 
 const BALL_SPEEDUP = 1.07;
 const BALL_VZ_INIT = 3.5;
