@@ -1,9 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFaceDetection } from './hooks/useBlinkDetection';
+import { useHandTracking } from './hooks/useHandTracking';
 import { useMultiplayer } from './hooks/useMultiplayer';
 import { useAuth } from './hooks/useAuth';
 import Game from './components/Game';
 import Runner from './components/Runner';
+import Pong from './components/Pong';
 import Landing from './components/Landing';
 import Play from './components/Play';
 import './App.css';
@@ -58,14 +60,19 @@ function App() {
   // Camera + MediaPipe only spin up when the user has actually committed
   // to play (picked a game, or landed inside a room URL). The marketing
   // pages stay zero-permission.
-  const needsCamera = activeGame !== null || inRoom;
+  const isPong = activeGame === 'pong';
+  const needsHand = isPong;
+  const needsFace = !isPong && (activeGame !== null || inRoom);
+  const needsCamera = needsFace || needsHand;
 
   const {
     isReady, error,
     p1Triggered,
     setOnBlink,
     setOnHeadSwipe,
-  } = useFaceDetection(videoRef, mode, false, needsCamera);
+  } = useFaceDetection(videoRef, mode, false, needsFace);
+
+  const hand = useHandTracking(videoRef, needsHand);
 
   useEffect(() => {
     const onPop = () => setRoute(parseRoute());
@@ -107,7 +114,9 @@ function App() {
 
   const handleVideoLoaded = useCallback(() => setCameraReady(true), []);
 
-  const showLoading = needsCamera && !isReady;
+  const trackerReady = needsHand ? hand.isReady : isReady;
+  const trackerError = needsHand ? hand.error : error;
+  const showLoading = needsCamera && !trackerReady;
   const inLobby = inRoom && !activeGame;
   const onLanding = route.page === 'landing' && !activeGame;
   const onPlayPage = route.page === 'play' && !activeGame;
@@ -197,11 +206,13 @@ function App() {
           <p>
             {cameraError
               ? `Camera blocked: ${cameraError}`
-              : error
-                ? `Model error: ${error}`
+              : trackerError
+                ? `Model error: ${trackerError}`
                 : !cameraReady
                   ? 'Asking your browser for the camera…'
-                  : 'Loading the face model… (lives on your machine)'}
+                  : needsHand
+                    ? 'Loading the hand model… (lives on your machine)'
+                    : 'Loading the face model… (lives on your machine)'}
           </p>
         </div>
       )}
@@ -241,6 +252,17 @@ function App() {
           onBack={backToMenu}
           multiplayer={multiplayer}
           mp={mp}
+        />
+      )}
+
+      {!showLoading && activeGame === 'pong' && (
+        <Pong
+          getHandPos={hand.getHandPos}
+          handReady={hand.isReady}
+          gameState={gameState}
+          setGameState={setGameState}
+          videoRef={videoRef}
+          onBack={backToMenu}
         />
       )}
     </div>
