@@ -52,7 +52,7 @@ function TopBar({ auth }) {
         <a href="#how">how</a>
         <a href="#why">why</a>
         <a
-          href="https://github.com/kiarashs/blinkbird"
+          href="https://github.com/notkearash/blinkbird"
           target="_blank"
           rel="noreferrer noopener"
           className="lp-top-github"
@@ -313,7 +313,7 @@ function OpenSource() {
           </p>
         </div>
         <a
-          href="https://github.com/kiarashs/blinkbird"
+          href="https://github.com/notkearash/blinkbird"
           target="_blank"
           rel="noreferrer noopener"
           className="lp-oss-cta"
@@ -332,7 +332,7 @@ function Footer() {
       <div className="lp-foot-line">
         <span>blinkbird ©</span>
         <span className="lp-foot-dot">·</span>
-        <span>built by <a href="https://github.com/kiarashs" target="_blank" rel="noreferrer noopener">kia</a></span>
+        <span>built by <a href="https://github.com/notkearash" target="_blank" rel="noreferrer noopener">kia</a></span>
         <span className="lp-foot-dot">·</span>
         <span>not affiliated with any actual bird</span>
       </div>
