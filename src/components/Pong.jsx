@@ -29,13 +29,15 @@ const PADDLE_HW = 48;   // half-width of paddle in world units
 const PADDLE_HH = 32;   // half-height
 const BALL_R = 14;
 
-const HAND_AMP = 1.7;   // amplifies hand motion so the user doesn't need to fully extend
+const HAND_AMP = 2.5;   // amplifies hand motion so the user doesn't need to fully extend
 const PADDLE_LERP = 0.32;
 
 const BALL_SPEEDUP = 1.07;
 const BALL_VZ_INIT = 3.5;
-const BALL_VZ_MAX = 22;
 const BALL_VXY_INIT = 1.0; // half-range for random initial sideways drift
+
+// Speed cap grows in tiers of 50: scores 0-49 → 50, 50-99 → 100, 100-149 → 150, ...
+function maxVz(score) { return 50 + Math.floor(score / 50) * 50; }
 
 function project(x, y, d) {
   const dd = Math.max(40, d); // avoid div-by-zero / hyperscale near camera
@@ -114,8 +116,10 @@ function Pong({ getHandPos, gameState, setGameState, videoRef, onBack, handReady
       if (hand) {
         const nx = -((hand.x - 0.5) * 2) * HAND_AMP;
         const ny = -((hand.y - 0.5) * 2) * HAND_AMP;
-        const maxX = COURT_HW - PADDLE_HW * 0.6;
-        const maxY = COURT_HH - PADDLE_HH * 0.6;
+        // Paddle edge stays inside the corridor walls (and, by extension, fully
+        // covers the ball's bounded range).
+        const maxX = COURT_HW - PADDLE_HW;
+        const maxY = COURT_HH - PADDLE_HH;
         const targetX = clamp(nx * maxX, -maxX, maxX);
         const targetY = clamp(ny * maxY, -maxY, maxY);
         s.paddle.x += (targetX - s.paddle.x) * PADDLE_LERP;
@@ -201,7 +205,7 @@ function update(s) {
     if (Math.abs(dx) < PADDLE_HW + BALL_R * 0.6 && Math.abs(dy) < PADDLE_HH + BALL_R * 0.6) {
       // Hit. Reverse vz, transfer english from hit offset.
       b.z = PADDLE_D + 1;
-      b.vz = Math.min(BALL_VZ_MAX, Math.abs(b.vz) * BALL_SPEEDUP);
+      b.vz = Math.min(maxVz(s.score), Math.abs(b.vz) * BALL_SPEEDUP);
       b.vx = clamp(b.vx + (dx / PADDLE_HW) * 2.2, -10, 10);
       b.vy = clamp(b.vy + (dy / PADDLE_HH) * 1.8, -8, 8);
       s.score++;
@@ -388,6 +392,36 @@ function drawCorridor(ctx, t) {
   ctx.textBaseline = 'middle';
   ctx.fillText('blinkbird', 0, 0);
   ctx.restore();
+  ctx.restore();
+
+  // Reach zone — dashed yellow rect at the paddle plane showing the area
+  // where the paddle can actually intercept. Anything outside is unreachable.
+  const reach = {
+    tl: project(-COURT_HW,  COURT_HH, PADDLE_D),
+    tr: project( COURT_HW,  COURT_HH, PADDLE_D),
+    br: project( COURT_HW, -COURT_HH, PADDLE_D),
+    bl: project(-COURT_HW, -COURT_HH, PADDLE_D),
+  };
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 216, 58, 0.55)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([7, 6]);
+  ctx.beginPath();
+  ctx.moveTo(reach.tl.sx, reach.tl.sy);
+  ctx.lineTo(reach.tr.sx, reach.tr.sy);
+  ctx.lineTo(reach.br.sx, reach.br.sy);
+  ctx.lineTo(reach.bl.sx, reach.bl.sy);
+  ctx.closePath();
+  ctx.stroke();
+  // tiny corner ticks so the bound reads even when dashes are between strokes
+  ctx.setLineDash([]);
+  const corners = [reach.tl, reach.tr, reach.br, reach.bl];
+  ctx.fillStyle = 'rgba(255, 216, 58, 0.85)';
+  for (const c of corners) {
+    ctx.beginPath();
+    ctx.arc(c.sx, c.sy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
