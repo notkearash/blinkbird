@@ -9,7 +9,6 @@ export function useHandTracking(videoRef, enabled = true) {
   const [error, setError] = useState(null);
 
   const landmarkerRef = useRef(null);
-  const rafRef = useRef(null);
   // Plain ref so the game loop reads without triggering React re-renders.
   const handPosRef = useRef(null);
 
@@ -47,25 +46,21 @@ export function useHandTracking(videoRef, enabled = true) {
 
   useEffect(() => {
     if (!enabled || !isReady || !videoRef.current) return;
+    const video = videoRef.current;
 
-    let lastTime = -1;
+    let cancelled = false;
+    let rvfcHandle = null;
+    let raf = null;
+    let lastTs = -1;
 
-    function detect() {
-      const video = videoRef.current;
+    function process(timestampMs) {
       const lm = landmarkerRef.current;
-      if (!video || !lm || video.readyState < 2) {
-        rafRef.current = requestAnimationFrame(detect);
-        return;
-      }
+      if (!lm || video.readyState < 2) return;
+      // MediaPipe requires strictly-increasing timestamps.
+      if (timestampMs <= lastTs) timestampMs = lastTs + 1;
+      lastTs = timestampMs;
 
-      const now = performance.now();
-      if (now === lastTime) {
-        rafRef.current = requestAnimationFrame(detect);
-        return;
-      }
-      lastTime = now;
-
-      const result = lm.detectForVideo(video, now);
+      const result = lm.detectForVideo(video, timestampMs);
       const hands = result.landmarks || [];
       if (hands.length > 0) {
         const palm = hands[0][PALM_LM];
@@ -73,13 +68,40 @@ export function useHandTracking(videoRef, enabled = true) {
       } else {
         handPosRef.current = null;
       }
-
-      rafRef.current = requestAnimationFrame(detect);
     }
 
-    rafRef.current = requestAnimationFrame(detect);
+    // Preferred path: per-video-frame callback. Inference runs once per real
+    // camera frame, not once per screen refresh.
+    function onVideoFrame(_now, metadata) {
+      if (cancelled) return;
+      const ts = metadata?.mediaTime != null
+        ? Math.round(metadata.mediaTime * 1000)
+        : performance.now();
+      process(ts);
+      if (!cancelled && typeof video.requestVideoFrameCallback === 'function') {
+        rvfcHandle = video.requestVideoFrameCallback(onVideoFrame);
+      }
+    }
+
+    // Fallback for browsers without rVFC.
+    function rafLoop() {
+      if (cancelled) return;
+      process(performance.now());
+      raf = requestAnimationFrame(rafLoop);
+    }
+
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      rvfcHandle = video.requestVideoFrameCallback(onVideoFrame);
+    } else {
+      raf = requestAnimationFrame(rafLoop);
+    }
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      if (rvfcHandle && typeof video.cancelVideoFrameCallback === 'function') {
+        video.cancelVideoFrameCallback(rvfcHandle);
+      }
     };
   }, [enabled, isReady, videoRef]);
 
