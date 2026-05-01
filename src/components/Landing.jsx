@@ -21,6 +21,7 @@ export default function Landing({ auth, onPlay }) {
       <Hero onPlay={onPlay} />
       <Ticker items={TICKER} />
       <HowItWorks />
+      <Privacy />
       <Manifesto />
       <OpenSource />
       <Footer />
@@ -187,6 +188,95 @@ function Step({ n, title, body }) {
       <div>
         <h4 className="lp-step-title">{title}</h4>
         <p className="lp-step-body">{body}</p>
+      </div>
+    </li>
+  );
+}
+
+function Privacy() {
+  return (
+    <section id="privacy" className="lp-privacy">
+      <SectionHead
+        index="02"
+        kicker="the receipts"
+        title={<>no DB. no emails. <em>no bullshit.</em></>}
+      />
+
+      <div className="lp-privacy-grid">
+        <article className="lp-priv-col lp-priv-no">
+          <header className="lp-priv-head">
+            <span className="lp-priv-tag lp-priv-tag-no">we don't have</span>
+          </header>
+          <ul className="lp-priv-list">
+            <PrivItem icon="✕" label="your email" body="we ask GitHub for read:user only — no email scope." />
+            <PrivItem icon="✕" label="a database" body="zero KV, zero D1, zero R2. the wrangler.toml is open." />
+            <PrivItem icon="✕" label="your face data" body="MediaPipe runs on your machine. video never leaves the tab." />
+            <PrivItem icon="✕" label="your IP / analytics" body="no GA, no Plausible, no Vercel Analytics. nothing." />
+            <PrivItem icon="✕" label="your high scores" body="local to your browser. we don't sync them anywhere." />
+            <PrivItem icon="✕" label="your messages" body="2P moves are forwarded peer-to-peer through a Durable Object. nothing is logged or stored." />
+          </ul>
+        </article>
+
+        <article className="lp-priv-col lp-priv-yes">
+          <header className="lp-priv-head">
+            <span className="lp-priv-tag lp-priv-tag-yes">we do have</span>
+          </header>
+          <ul className="lp-priv-list">
+            <PrivItem
+              icon="✓"
+              label="a signed cookie"
+              body="HttpOnly, SameSite=Lax, 30 days. payload: your GitHub id, login, name, avatar. signed with HMAC so nobody can forge it. lives on YOUR machine."
+              accent
+            />
+          </ul>
+          <p className="lp-priv-note">
+            That's it. That's the entire user-data surface.
+          </p>
+        </article>
+      </div>
+
+      <aside className="lp-priv-receipts">
+        <header>
+          <span className="lp-priv-receipts-mark">$</span>
+          <span className="lp-priv-receipts-title">read the worker yourself</span>
+        </header>
+        <pre className="lp-priv-code"><code>{`// worker/session.js — the entire "session store"
+export async function makeSession(user, secret) {
+  const payload = {
+    id: user.id,
+    login: user.login,
+    name: user.name || user.login,
+    avatar: user.avatar_url,
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+  };
+  return sign(payload, secret); // HMAC, returned as a cookie
+}`}</code></pre>
+        <div className="lp-priv-links">
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/index.js" target="_blank" rel="noreferrer noopener">
+            worker/index.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/session.js" target="_blank" rel="noreferrer noopener">
+            worker/session.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/worker/room.js" target="_blank" rel="noreferrer noopener">
+            worker/room.js
+          </a>
+          <a href="https://github.com/notkearash/blinkbird/blob/main/wrangler.toml" target="_blank" rel="noreferrer noopener">
+            wrangler.toml
+          </a>
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function PrivItem({ icon, label, body, accent }) {
+  return (
+    <li className={`lp-priv-item${accent ? ' lp-priv-item-accent' : ''}`}>
+      <span className="lp-priv-icon" aria-hidden="true">{icon}</span>
+      <div>
+        <span className="lp-priv-label">{label}</span>
+        <span className="lp-priv-body">{body}</span>
       </div>
     </li>
   );
