@@ -431,39 +431,44 @@ function drawPaddle(ctx, paddle, hitFlash) {
   const h = PADDLE_HH * 2 * p.scale;
   const x = p.sx - w / 2;
   const y = p.sy - h / 2;
+  const BODY_ALPHA = 0.28;
 
-  // ink shadow offset
-  ctx.fillStyle = INK;
-  roundRect(ctx, x + 6, y + 6, w, h, 10);
-  ctx.fill();
-
-  // paddle body
+  // translucent body so the ball/court behind stays visible
+  ctx.save();
+  ctx.globalAlpha = BODY_ALPHA;
   ctx.fillStyle = hitFlash > 0 ? YELLOW : PINK;
   roundRect(ctx, x, y, w, h, 10);
   ctx.fill();
-  ctx.lineWidth = 2;
+  ctx.restore();
+
+  // outline at full opacity so paddle position reads clearly
+  ctx.lineWidth = 2.5;
   ctx.strokeStyle = INK;
+  roundRect(ctx, x, y, w, h, 10);
   ctx.stroke();
 
-  // halftone shading
+  // faint halftone shading inside the body
   ctx.save();
   roundRect(ctx, x, y, w, h, 10);
   ctx.clip();
-  dotGrid(ctx, x, y, w, h, 'rgba(244,234,213,0.45)', 5, 1.2);
+  ctx.globalAlpha = 0.5;
+  dotGrid(ctx, x, y, w, h, 'rgba(244,234,213,0.55)', 5, 1.2);
   ctx.restore();
 
-  // grip stripe
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(x + w * 0.42, y + h * 0.15, w * 0.16, h * 0.7);
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = INK;
-  ctx.strokeRect(x + w * 0.42, y + h * 0.15, w * 0.16, h * 0.7);
-
-  // crosshair dot at paddle center — helps the player aim
+  // crosshair at paddle center for aim — full opacity
   ctx.fillStyle = INK;
   ctx.beginPath();
   ctx.arc(p.sx, p.sy, Math.max(2, p.scale * 2.5), 0, Math.PI * 2);
   ctx.fill();
+  // small ink corner ticks so corners read against the back wall
+  const tick = Math.max(4, p.scale * 6);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + tick); ctx.lineTo(x, y); ctx.lineTo(x + tick, y);
+  ctx.moveTo(x + w - tick, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + tick);
+  ctx.moveTo(x + w, y + h - tick); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - tick, y + h);
+  ctx.moveTo(x + tick, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - tick);
+  ctx.stroke();
 }
 
 function draw(ctx, s, handVisible, handReady) {
