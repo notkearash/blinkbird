@@ -1,0 +1,28 @@
+name = "blinkbird"
+main = "worker/index.js"
+compatibility_date = "2025-11-01"
+
+routes = [
+  { pattern = "blinkbird.kearash.io", custom_domain = true },
+]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
+
+[vars]
+GITHUB_CLIENT_ID = "Ov23linPIo07DJr4UjwM"
+
+# Set via `wrangler secret put`:
+#   SESSION_SECRET
+#   GITHUB_CLIENT_SECRET
