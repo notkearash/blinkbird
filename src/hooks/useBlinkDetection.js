@@ -121,6 +121,16 @@ export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false, 
   const setOnHeadSwipe = useCallback((fn) => { onP1HeadSwipeRef.current = fn; }, []);
   const setOnP2HeadSwipe = useCallback((fn) => { onP2HeadSwipeRef.current = fn; }, []);
 
+  // Continuous lean read for games that need a per-frame slip value
+  // (boxing dodges) instead of the discrete swipe events that Runner uses.
+  // Returns delta from the auto-calibrated baseline; positive = user leaning
+  // their left in the mirrored video.
+  const getHeadX = useCallback(() => {
+    const ps = p1State.current;
+    if (ps.headXBaseline == null) return 0;
+    return ps.headXSmooth - ps.headXBaseline;
+  }, []);
+
   useEffect(() => {
     if (!enabled || landmarkerRef.current) return;
     let cancelled = false;
@@ -228,5 +238,6 @@ export function useFaceDetection(videoRef, mode = 'blink', multiplayer = false, 
     p1Triggered, p2Triggered,
     setOnBlink, setOnP2Blink,
     setOnHeadSwipe, setOnP2HeadSwipe,
+    getHeadX,
   };
 }
