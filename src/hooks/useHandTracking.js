@@ -4,6 +4,10 @@ import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 // Landmark 9 = middle-finger MCP — sits roughly at the palm center.
 const PALM_LM = 9;
 
+// Cap inference at ~30 Hz. The paddle is smoothed downstream, so 60 Hz
+// detection is wasted CPU/GPU on weak machines.
+const MIN_INFERENCE_INTERVAL_MS = 33;
+
 export function useHandTracking(videoRef, enabled = true) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
@@ -52,10 +56,13 @@ export function useHandTracking(videoRef, enabled = true) {
     let rvfcHandle = null;
     let raf = null;
     let lastTs = -1;
+    let lastInferenceMs = -Infinity;
 
     function process(timestampMs) {
       const lm = landmarkerRef.current;
       if (!lm || video.readyState < 2) return;
+      if (timestampMs - lastInferenceMs < MIN_INFERENCE_INTERVAL_MS) return;
+      lastInferenceMs = timestampMs;
       // MediaPipe requires strictly-increasing timestamps.
       if (timestampMs <= lastTs) timestampMs = lastTs + 1;
       lastTs = timestampMs;
