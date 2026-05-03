@@ -4,6 +4,15 @@ import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 // Landmark 9 = middle-finger MCP — sits roughly at the palm center.
 const PALM_LM = 9;
 
+// Cap inference at ~30 Hz. The paddle is smoothed downstream, so 60 Hz
+// detection is wasted CPU/GPU on weak machines.
+const MIN_INFERENCE_INTERVAL_MS = 33;
+
+// Downscale frames before inference. hand_landmarker is trained on small
+// inputs anyway; feeding it 640×480 just burns cycles on the GPU upload.
+const INFERENCE_W = 256;
+const INFERENCE_H = 192;
+
 export function useHandTracking(videoRef, enabled = true) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
@@ -52,15 +61,24 @@ export function useHandTracking(videoRef, enabled = true) {
     let rvfcHandle = null;
     let raf = null;
     let lastTs = -1;
+    let lastInferenceMs = -Infinity;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = INFERENCE_W;
+    canvas.height = INFERENCE_H;
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
 
     function process(timestampMs) {
       const lm = landmarkerRef.current;
       if (!lm || video.readyState < 2) return;
+      if (timestampMs - lastInferenceMs < MIN_INFERENCE_INTERVAL_MS) return;
+      lastInferenceMs = timestampMs;
       // MediaPipe requires strictly-increasing timestamps.
       if (timestampMs <= lastTs) timestampMs = lastTs + 1;
       lastTs = timestampMs;
 
-      const result = lm.detectForVideo(video, timestampMs);
+      ctx.drawImage(video, 0, 0, INFERENCE_W, INFERENCE_H);
+      const result = lm.detectForVideo(canvas, timestampMs);
       const hands = result.landmarks || [];
       if (hands.length > 0) {
         const palm = hands[0][PALM_LM];
