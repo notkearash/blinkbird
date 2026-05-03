@@ -272,6 +272,7 @@
 
 .pp-card-pink .pp-card-art { background: var(--pink); color: var(--paper); }
 .pp-card-blue .pp-card-art { background: var(--blue); color: var(--paper); }
+.pp-card-yellow .pp-card-art { background: var(--yellow); color: var(--ink); }
 
 .pp-card-art {
   display: flex;
