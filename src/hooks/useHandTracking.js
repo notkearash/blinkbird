@@ -18,7 +18,10 @@ export function useHandTracking(videoRef, enabled = true) {
   const [error, setError] = useState(null);
 
   const landmarkerRef = useRef(null);
-  // Plain ref so the game loop reads without triggering React re-renders.
+  // Plain refs so the game loop reads without triggering React re-renders.
+  // handsRef holds both hands keyed by handedness; handPosRef keeps the
+  // single-hand shape that older games (Pong) read.
+  const handsRef = useRef({ left: null, right: null });
   const handPosRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export function useHandTracking(videoRef, enabled = true) {
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
-          numHands: 1,
+          numHands: 2,
         });
         if (cancelled) return;
 
@@ -80,12 +83,34 @@ export function useHandTracking(videoRef, enabled = true) {
       ctx.drawImage(video, 0, 0, INFERENCE_W, INFERENCE_H);
       const result = lm.detectForVideo(canvas, timestampMs);
       const hands = result.landmarks || [];
-      if (hands.length > 0) {
-        const palm = hands[0][PALM_LM];
-        handPosRef.current = { x: palm.x, y: palm.y };
-      } else {
-        handPosRef.current = null;
+      const handedness = result.handedness || [];
+
+      let leftHand = null;
+      let rightHand = null;
+
+      for (let i = 0; i < hands.length; i++) {
+        const palm = hands[i][PALM_LM];
+        const entry = { x: palm.x, y: palm.y, z: palm.z ?? 0 };
+        // Mediapipe's "handedness" labels reflect the *user's* hand. The video
+        // is mirrored when displayed, so the user's right hand appears on the
+        // right side of our canvas — which is what the boxing component wants
+        // for "right glove".
+        const label = handedness[i]?.[0]?.categoryName;
+        if (label === 'Right' && !rightHand) rightHand = entry;
+        else if (label === 'Left' && !leftHand) leftHand = entry;
+        else if (!rightHand && !leftHand) {
+          // Fallback when handedness is absent: assume single hand → right.
+          rightHand = entry;
+        } else if (!leftHand) {
+          leftHand = entry;
+        } else if (!rightHand) {
+          rightHand = entry;
+        }
       }
+
+      handsRef.current = { left: leftHand, right: rightHand };
+      // Backwards compat for Pong: pick whichever hand is visible.
+      handPosRef.current = rightHand || leftHand || null;
     }
 
     // Preferred path: per-video-frame callback. Inference runs once per real
@@ -124,5 +149,6 @@ export function useHandTracking(videoRef, enabled = true) {
   }, [enabled, isReady, videoRef]);
 
   const getHandPos = useCallback(() => handPosRef.current, []);
-  return { isReady, error, getHandPos };
+  const getHands = useCallback(() => handsRef.current, []);
+  return { isReady, error, getHandPos, getHands };
 }
