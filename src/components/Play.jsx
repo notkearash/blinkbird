@@ -48,15 +48,6 @@ export default function Play({ auth, creating, createError, onSolo, onCreateRoom
           onSolo={() => onSolo('pong')}
           creating={creating}
         />
-        <GameCard
-          accent="yellow"
-          title="Boxing"
-          subtitle="two gloves, dodge & punch"
-          rule="thrust forward to throw. lean to slip. last fighter standing wins."
-          art={<BoxingArt />}
-          onSolo={() => onSolo('boxing')}
-          creating={creating}
-        />
       </section>
 
       {createError && <p className="pp-error">! {createError}</p>}
@@ -202,40 +193,6 @@ function PongArt() {
       <g transform="translate(20 24)" stroke="#181410" strokeWidth="2.5" fill="#f4ead5" strokeLinejoin="round">
         <path d="M0 18 L0 4 Q0 0 4 0 Q8 0 8 4 L8 14 L11 14 L11 2 Q11 -2 15 -2 Q19 -2 19 2 L19 14 L22 14 L22 4 Q22 0 26 0 Q30 0 30 4 L30 14 L33 14 L33 8 Q33 4 37 4 Q41 4 41 8 L41 24 Q41 36 28 36 L10 36 Q0 36 0 26 Z" />
       </g>
-    </svg>
-  );
-}
-
-function BoxingArt() {
-  return (
-    <svg viewBox="0 0 220 160" className="pp-art" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="pp-halftone-boxing" patternUnits="userSpaceOnUse" width="6" height="6">
-          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
-        </pattern>
-      </defs>
-      <rect x="0" y="0" width="220" height="160" fill="url(#pp-halftone-boxing)" opacity="0.3" />
-      {/* opponent silhouette */}
-      <rect x="80" y="40" width="60" height="70" rx="10" fill="#1f3df0" stroke="#181410" strokeWidth="2.5" />
-      <circle cx="110" cy="34" r="20" fill="#e8d4a4" stroke="#181410" strokeWidth="2.5" />
-      <rect x="100" y="30" width="6" height="3" fill="#181410" />
-      <rect x="115" y="30" width="6" height="3" fill="#181410" />
-      <rect x="80" y="98" width="60" height="6" fill="#ffe14a" stroke="#181410" strokeWidth="1.5" />
-      {/* player gloves coming in from below */}
-      <g>
-        <ellipse cx="38" cy="142" rx="4" ry="2" fill="rgba(0,0,0,0.4)" />
-        <circle cx="38" cy="130" r="22" fill="#ff3a86" stroke="#181410" strokeWidth="2.5" />
-        <circle cx="50" cy="132" r="8" fill="#ff3a86" stroke="#181410" strokeWidth="2" />
-        <rect x="22" y="142" width="32" height="5" fill="#f4ead5" stroke="#181410" strokeWidth="1.4" />
-      </g>
-      <g>
-        <ellipse cx="184" cy="142" rx="4" ry="2" fill="rgba(0,0,0,0.4)" />
-        <circle cx="184" cy="130" r="22" fill="#1f3df0" stroke="#181410" strokeWidth="2.5" />
-        <circle cx="172" cy="132" r="8" fill="#1f3df0" stroke="#181410" strokeWidth="2" />
-        <rect x="168" y="142" width="32" height="5" fill="#f4ead5" stroke="#181410" strokeWidth="1.4" />
-      </g>
-      {/* impact stars */}
-      <path d="M138 56 L146 50 L150 56 L158 52 L154 60 L162 64 L154 66 L156 74 L148 70 L142 76 L142 68 L134 66 L140 60 Z" fill="#ffe14a" stroke="#181410" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 }

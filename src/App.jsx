@@ -6,13 +6,12 @@ import { useAuth } from './hooks/useAuth';
 import Game from './components/Game';
 import Runner from './components/Runner';
 import Pong from './components/Pong';
-import Boxing from './components/Boxing';
 import Landing from './components/Landing';
 import Play from './components/Play';
 import './App.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SOLO_RE = /^\/(flappy|runner|pong|boxing)\/?$/;
+const SOLO_RE = /^\/(flappy|runner|pong)\/?$/;
 
 // Safety net: if React ever boots at an /api/ path (e.g., user hit Back after an
 // OAuth hop), rewrite to / so we don't stuff an /api/ URL into return_to and
@@ -70,9 +69,8 @@ function App() {
   // to play (picked a game, or landed inside a room URL). The marketing
   // pages stay zero-permission.
   const isPong = activeGame === 'pong';
-  const isBoxing = activeGame === 'boxing';
-  const needsHand = isPong || isBoxing;
-  const needsFace = (!isPong && (activeGame !== null || inRoom)) || isBoxing;
+  const needsHand = isPong;
+  const needsFace = !isPong && (activeGame !== null || inRoom);
   const needsCamera = needsFace || needsHand;
 
   const {
@@ -80,7 +78,6 @@ function App() {
     p1Triggered,
     setOnBlink,
     setOnHeadSwipe,
-    getHeadX,
   } = useFaceDetection(videoRef, mode, false, needsFace);
 
   const hand = useHandTracking(videoRef, needsHand);
@@ -284,19 +281,6 @@ function App() {
         <Pong
           getHandPos={hand.getHandPos}
           handReady={hand.isReady}
-          gameState={gameState}
-          setGameState={setGameState}
-          videoRef={videoRef}
-          onBack={backToMenu}
-        />
-      )}
-
-      {!showLoading && activeGame === 'boxing' && (
-        <Boxing
-          getHands={hand.getHands}
-          getHeadX={getHeadX}
-          handReady={hand.isReady}
-          faceReady={isReady}
           gameState={gameState}
           setGameState={setGameState}
           videoRef={videoRef}
