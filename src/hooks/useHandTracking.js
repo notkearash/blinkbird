@@ -85,27 +85,51 @@ export function useHandTracking(videoRef, enabled = true) {
       const hands = result.landmarks || [];
       const handedness = result.handedness || [];
 
+      // Build per-detection entries first, then assign sides in a second pass.
+      // Two-hand assignment uses image position (more reliable than the model's
+      // handedness when both detections happen to share a label); single-hand
+      // assignment falls back to the (swap-corrected) handedness label.
+      const detected = [];
+      for (let i = 0; i < hands.length; i++) {
+        const lms = hands[i];
+        const palm = lms[PALM_LM];
+        // Bounding-box span as a closeness-to-camera proxy. The hand grows in
+        // the frame as it moves toward the camera, which is what we use to
+        // detect a forward thrust (a punch) downstream. MediaPipe's `z` is
+        // relative to the wrist and so cannot be used for absolute depth.
+        let minX = 1, maxX = 0, minY = 1, maxY = 0;
+        for (let k = 0; k < lms.length; k++) {
+          const p = lms[k];
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        const size = Math.max(maxX - minX, maxY - minY);
+        const entry = { x: palm.x, y: palm.y, z: palm.z ?? 0, size };
+        const label = handedness[i]?.[0]?.categoryName ?? null;
+        detected.push({ entry, label, x: palm.x });
+      }
+
       let leftHand = null;
       let rightHand = null;
 
-      for (let i = 0; i < hands.length; i++) {
-        const palm = hands[i][PALM_LM];
-        const entry = { x: palm.x, y: palm.y, z: palm.z ?? 0 };
-        // Mediapipe's "handedness" labels reflect the *user's* hand. The video
-        // is mirrored when displayed, so the user's right hand appears on the
-        // right side of our canvas — which is what the boxing component wants
-        // for "right glove".
-        const label = handedness[i]?.[0]?.categoryName;
-        if (label === 'Right' && !rightHand) rightHand = entry;
-        else if (label === 'Left' && !leftHand) leftHand = entry;
-        else if (!rightHand && !leftHand) {
-          // Fallback when handedness is absent: assume single hand → right.
-          rightHand = entry;
-        } else if (!leftHand) {
-          leftHand = entry;
-        } else if (!rightHand) {
-          rightHand = entry;
-        }
+      if (detected.length >= 2) {
+        // Sort by image x. In an unmirrored frame, the user's right hand
+        // appears on the camera-left (lower x) — period. This holds even when
+        // the model gives both detections the same handedness label.
+        detected.sort((a, b) => a.x - b.x);
+        rightHand = detected[0].entry;
+        leftHand = detected[1].entry;
+      } else if (detected.length === 1) {
+        const d = detected[0];
+        // MediaPipe Tasks HandLandmarker assumes the input frame is mirrored
+        // (selfie-style). Browser webcams deliver an unmirrored stream, so the
+        // model's labels are flipped relative to the user — swap them.
+        if (d.label === 'Right') leftHand = d.entry;
+        else if (d.label === 'Left') rightHand = d.entry;
+        else if (d.x < 0.5) rightHand = d.entry;
+        else leftHand = d.entry;
       }
 
       handsRef.current = { left: leftHand, right: rightHand };
