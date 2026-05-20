@@ -6,12 +6,12 @@ import { useAuth } from './hooks/useAuth';
 import Game from './components/Game';
 import Runner from './components/Runner';
 import Pong from './components/Pong';
-import Landing from './components/Landing';
+import Submarine from './components/Submarine';
 import Play from './components/Play';
 import './App.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SOLO_RE = /^\/(flappy|runner|pong)\/?$/;
+const SOLO_RE = /^\/(flappy|runner|pong|submarine)\/?$/;
 
 // Safety net: if React ever boots at an /api/ path (e.g., user hit Back after an
 // OAuth hop), rewrite to / so we don't stuff an /api/ URL into return_to and
@@ -28,17 +28,14 @@ function parseRoute() {
     return {
       page: 'room',
       roomId: room[1],
-      game: game === 'flappy' || game === 'runner' ? game : null,
+      game: game === 'flappy' || game === 'runner' || game === 'submarine' ? game : null,
     };
-  }
-  if (/^\/play\/?$/.test(location.pathname)) {
-    return { page: 'play', roomId: null, game: null };
   }
   const solo = location.pathname.match(SOLO_RE);
   if (solo) {
     return { page: 'solo', roomId: null, game: solo[1] };
   }
-  return { page: 'landing', roomId: null, game: null };
+  return { page: 'play', roomId: null, game: null };
 }
 
 function navigateTo(path) {
@@ -69,8 +66,9 @@ function App() {
   // to play (picked a game, or landed inside a room URL). The marketing
   // pages stay zero-permission.
   const isPong = activeGame === 'pong';
+  const isSubmarine = activeGame === 'submarine';
   const needsHand = isPong;
-  const needsFace = !isPong && (activeGame !== null || inRoom);
+  const needsFace = !isPong && !isSubmarine && (activeGame !== null || inRoom);
   const needsCamera = needsFace || needsHand;
 
   const {
@@ -95,7 +93,7 @@ function App() {
       setMultiplayer(false);
       setActiveGame(route.game);
       setGameState('waiting');
-    } else if (route.page === 'play' || route.page === 'landing') {
+    } else if (route.page === 'play') {
       setActiveGame(null);
       setMultiplayer(false);
     }
@@ -105,8 +103,8 @@ function App() {
     if (!auth.user) return;
     const params = new URLSearchParams(location.search);
     const game = params.get('create');
-    if (game !== 'flappy' && game !== 'runner') return;
-    if (location.pathname !== '/play') navigateTo(`/play?create=${game}`);
+    if (game !== 'flappy' && game !== 'runner' && game !== 'submarine') return;
+    if (location.pathname !== '/') navigateTo(`/?create=${game}`);
     createRoom(game);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.user]);
@@ -139,9 +137,8 @@ function App() {
   const trackerError = (needsHand && hand.error) || (needsFace && error);
   const showLoading = needsCamera && !trackerReady;
   const inLobby = inRoom && !activeGame;
-  const onLanding = route.page === 'landing' && !activeGame;
   const onPlayPage = route.page === 'play' && !activeGame;
-  const isMarketing = onLanding || onPlayPage;
+  const isMarketing = onPlayPage;
 
   useEffect(() => {
     document.body.classList.toggle('body--landing', isMarketing);
@@ -158,7 +155,7 @@ function App() {
   async function createRoom(game) {
     if (auth.loading) return;
     if (!auth.user) {
-      auth.signIn(`/play?create=${game}`);
+      auth.signIn(`/?create=${game}`);
       return;
     }
     setCreating(true);
@@ -189,11 +186,8 @@ function App() {
     setMultiplayer(false);
     mp.disconnect();
     setGameState('waiting');
-    navigateTo('/play');
+    navigateTo('/');
   }, [mp]);
-
-  const goToPlay = useCallback(() => navigateTo('/play'), []);
-  const goToLanding = useCallback(() => navigateTo('/'), []);
 
   return (
     <div className={`app${isMarketing ? ' app--landing' : ''}`}>
@@ -206,10 +200,6 @@ function App() {
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
       />
 
-      {onLanding && (
-        <Landing auth={auth} onPlay={goToPlay} />
-      )}
-
       {onPlayPage && (
         <Play
           auth={auth}
@@ -217,7 +207,6 @@ function App() {
           createError={createError}
           onSolo={startSolo}
           onCreateRoom={createRoom}
-          onBack={goToLanding}
         />
       )}
 
@@ -287,24 +276,16 @@ function App() {
           onBack={backToMenu}
         />
       )}
-    </div>
-  );
-}
 
-function AuthBadge({ auth }) {
-  if (auth.loading) return <div className="auth-badge auth-loading">...</div>;
-  if (!auth.user) {
-    return (
-      <button className="auth-badge auth-signin" onClick={() => auth.signIn()}>
-        <GitHubIcon /> Sign in with GitHub
-      </button>
-    );
-  }
-  return (
-    <div className="auth-badge">
-      <img src={auth.user.avatar} alt="" className="auth-avatar" />
-      <span>{auth.user.login}</span>
-      <button className="auth-signout" onClick={auth.signOut}>sign out</button>
+      {!showLoading && activeGame === 'submarine' && (
+        <Submarine
+          gameState={gameState}
+          setGameState={setGameState}
+          onBack={backToMenu}
+          multiplayer={multiplayer}
+          mp={mp}
+        />
+      )}
     </div>
   );
 }
@@ -343,7 +324,7 @@ function Lobby({ auth, mp, roomId, game, onStart, onBack }) {
     } catch {}
   }
 
-  const gameName = game === 'flappy' ? 'Flappy Bird' : game === 'runner' ? 'Lane Runner' : 'Unknown';
+  const gameName = game === 'flappy' ? 'Flappy Bird' : game === 'runner' ? 'Lane Runner' : game === 'submarine' ? 'Submarine' : 'Unknown';
 
   if (!game) {
     return (
